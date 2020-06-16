@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="WebServers">
+    <option name="servers">
+      <webServer id="eeba80f3-b074-4105-8ef2-14233c5fc8a9" name="Printer 1" url="http://192.168.1.85/">
+        <fileTransfer rootFolder="/home/pi/SimplyPrint" accessType="SFTP" host="192.168.50.85" port="22" sshConfigId="800cbac8-155b-46f9-ae68-f988c11ab4d8" sshConfig="Printer 1">
+          <advancedOptions>
+            <advancedOptions dataProtectionLevel="Private" passiveMode="true" shareSSLContext="true" />
+          </advancedOptions>
+        </fileTransfer>
+      </webServer>
+    </option>
+  </component>
+</project>

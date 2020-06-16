@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="SshConfigs">
+    <configs>
+      <sshConfig authType="PASSWORD" host="192.168.50.85" id="76601f97-9a72-4653-8104-9da5ca624a1e" port="22" customName="Mathias Printer" nameFormat="CUSTOM" username="pi" />
+      <sshConfig authType="PASSWORD" host="192.168.50.85" id="800cbac8-155b-46f9-ae68-f988c11ab4d8" port="22" customName="Printer 1" nameFormat="CUSTOM" username="pi" />
+    </configs>
+  </component>
+</project>

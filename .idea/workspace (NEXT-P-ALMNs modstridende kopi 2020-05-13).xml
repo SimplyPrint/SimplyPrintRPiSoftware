@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="b78e8230-2c1c-4b36-9f37-386d0b331dc2" name="Default Changelist" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="ComposerSettings">
+    <execution>
+      <executable />
+    </execution>
+  </component>
+  <component name="DatabaseView">
+    <option name="SHOW_INTERMEDIATE" value="true" />
+    <option name="GROUP_DATA_SOURCES" value="true" />
+    <option name="GROUP_SCHEMA" value="true" />
+    <option name="GROUP_CONTENTS" value="false" />
+    <option name="SORT_POSITIONED" value="false" />
+    <option name="SHOW_EMPTY_GROUPS" value="false" />
+    <option name="AUTO_SCROLL_FROM_SOURCE" value="false" />
+    <option name="HIDDEN_KINDS">
+      <set />
+    </option>
+    <expand />
+    <select />
+  </component>
+  <component name="ProjectId" id="1UHfFD5auC2unQ79XbRRLoYHjdU" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="RunOnceActivity.ShowReadmeOnStart" value="true" />
+    <property name="WebServerToolWindowFactoryState" value="true" />
+    <property name="WebServerToolWindowPanel.toolwindow.highlight.mappings" value="true" />
+    <property name="WebServerToolWindowPanel.toolwindow.highlight.symlinks" value="true" />
+    <property name="WebServerToolWindowPanel.toolwindow.show.date" value="false" />
+    <property name="WebServerToolWindowPanel.toolwindow.show.permissions" value="false" />
+    <property name="WebServerToolWindowPanel.toolwindow.show.size" value="false" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../../../SimplyPrint/RPI image/OctoPi" />
+    <property name="settings.editor.selected.configurable" value="com.jetbrains.python.configuration.PyActiveSdkModuleConfigurable" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\Albert\Dropbox\Programmering\Python\NewPrinterHubSystem" />
+    </key>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="b78e8230-2c1c-4b36-9f37-386d0b331dc2" name="Default Changelist" comment="" />
+      <created>1575018335077</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1575018335077</updated>
+      <workItem from="1575018336461" duration="1694000" />
+      <workItem from="1575020061513" duration="2635000" />
+      <workItem from="1575022720031" duration="34024000" />
+      <workItem from="1575313028448" duration="171000" />
+      <workItem from="1575313264820" duration="5104000" />
+      <workItem from="1575551288736" duration="12177000" />
+      <workItem from="1575897791853" duration="23250000" />
+      <workItem from="1576057837008" duration="11396000" />
+      <workItem from="1576104213024" duration="1740000" />
+      <workItem from="1576671477933" duration="304000" />
+      <workItem from="1576688476876" duration="10618000" />
+      <workItem from="1576802621170" duration="753000" />
+      <workItem from="1577624718157" duration="742000" />
+      <workItem from="1577628095876" duration="104000" />
+      <workItem from="1577628439884" duration="1791000" />
+      <workItem from="1577630255621" duration="1792000" />
+      <workItem from="1577632197356" duration="1352000" />
+      <workItem from="1577634012535" duration="1078000" />
+      <workItem from="1577636345456" duration="1794000" />
+      <workItem from="1577638181299" duration="1788000" />
+      <workItem from="1577639992477" duration="1791000" />
+      <workItem from="1577641801121" duration="1814000" />
+      <workItem from="1577643637496" duration="1156000" />
+      <workItem from="1577645449539" duration="1778000" />
+      <workItem from="1577647315953" duration="657000" />
+      <workItem from="1578150653220" duration="767000" />
+      <workItem from="1578153413896" duration="1202000" />
+      <workItem from="1578158774228" duration="25979000" />
+      <workItem from="1578427767694" duration="9594000" />
+      <workItem from="1578573991853" duration="5715000" />
+      <workItem from="1578658375818" duration="2028000" />
+      <workItem from="1578693253719" duration="318000" />
+      <workItem from="1578693583006" duration="4705000" />
+      <workItem from="1579542872645" duration="1928000" />
+      <workItem from="1579772321899" duration="1719000" />
+      <workItem from="1581514152466" duration="8619000" />
+      <workItem from="1581939759182" duration="5025000" />
+      <workItem from="1582107802553" duration="3812000" />
+      <workItem from="1582210455243" duration="1466000" />
+      <workItem from="1582535796727" duration="5614000" />
+      <workItem from="1582580272295" duration="3824000" />
+      <workItem from="1582622361913" duration="795000" />
+      <workItem from="1582717331430" duration="5585000" />
+      <workItem from="1582837480276" duration="4898000" />
+      <workItem from="1582881520721" duration="8290000" />
+      <workItem from="1584356749381" duration="808000" />
+      <workItem from="1584958328821" duration="9289000" />
+      <workItem from="1585823316520" duration="2164000" />
+      <workItem from="1585853009485" duration="9912000" />
+      <workItem from="1585911031828" duration="8828000" />
+      <workItem from="1586351014365" duration="3058000" />
+      <workItem from="1586467580453" duration="5037000" />
+      <workItem from="1586522868476" duration="957000" />
+      <workItem from="1586534264149" duration="5546000" />
+      <workItem from="1586957221690" duration="4706000" />
+      <workItem from="1587041315331" duration="5000" />
+      <workItem from="1587118380870" duration="1272000" />
+      <workItem from="1587460134255" duration="57000" />
+      <workItem from="1587506269680" duration="3764000" />
+      <workItem from="1587669454467" duration="1742000" />
+      <workItem from="1588183949353" duration="12545000" />
+      <workItem from="1588705022570" duration="229000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="1" />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="478" y="174" key="#Deployment" timestamp="1588250351217">
+      <screen x="0" y="0" width="1858" height="1080" />
+    </state>
+    <state x="385" y="94" key="#Deployment/0.0.1536.824/-1366.303.1366.728@0.0.1536.824" timestamp="1582841036909" />
+    <state x="395" y="133" key="#Deployment/0.0.1536.824@0.0.1536.824" timestamp="1584958334201" />
+    <state x="478" y="174" key="#Deployment/0.0.1858.1080/-1680.14.1618.1050/1920.14.1680.1010@0.0.1858.1080" timestamp="1587672387863" />
+    <state x="478" y="174" key="#Deployment/1920.0.1858.1080/0.0.1858.1080@0.0.1858.1080" timestamp="1588250351217" />
+    <state x="2398" y="174" key="#Deployment/1920.0.1858.1080/0.0.1858.1080@1920.0.1858.1080" timestamp="1588184192163" />
+    <state x="2382" y="161" key="#SSH_Configurations" timestamp="1588184180221">
+      <screen x="1920" y="0" width="1858" height="1080" />
+    </state>
+    <state x="2382" y="161" key="#SSH_Configurations/1920.0.1858.1080/0.0.1858.1080@1920.0.1858.1080" timestamp="1588184180221" />
+    <state x="708" y="294" key="FileChooserDialogImpl" timestamp="1587460190055">
+      <screen x="0" y="0" width="1858" height="1080" />
+    </state>
+    <state x="708" y="294" key="FileChooserDialogImpl/1920.0.1858.1080/0.0.1858.1080@0.0.1858.1080" timestamp="1587460190055" />
+    <state x="430" y="182" key="SettingsEditor" timestamp="1585823486191">
+      <screen x="0" y="0" width="1858" height="1080" />
+    </state>
+    <state x="430" y="182" key="SettingsEditor/1920.0.1858.1080/0.0.1858.1080@0.0.1858.1080" timestamp="1585823486191" />
+    <state x="576" y="155" key="com.intellij.openapi.editor.actions.MultiplePasteAction$ClipboardContentChooser" timestamp="1585864970571">
+      <screen x="0" y="0" width="1858" height="1080" />
+    </state>
+    <state x="576" y="155" key="com.intellij.openapi.editor.actions.MultiplePasteAction$ClipboardContentChooser/1920.0.1858.1080/0.0.1858.1080@0.0.1858.1080" timestamp="1585864970571" />
+    <state x="656" y="63" width="909" height="986" key="find.popup" timestamp="1588234316112">
+      <screen x="0" y="0" width="1858" height="1080" />
+    </state>
+    <state x="475" y="34" width="778" height="790" key="find.popup/0.0.1536.824/-1366.303.1366.728@0.0.1536.824" timestamp="1582924676790" />
+    <state x="643" y="35" width="777" height="789" key="find.popup/0.0.1536.824@0.0.1536.824" timestamp="1584987174706" />
+    <state x="656" y="63" width="909" height="986" key="find.popup/1920.0.1858.1080/0.0.1858.1080@0.0.1858.1080" timestamp="1588234316112" />
+    <state x="2500" y="50" width="909" height="986" key="find.popup/1920.0.1858.1080/0.0.1858.1080@1920.0.1858.1080" timestamp="1587586866281" />
+    <state x="798" y="433" key="publish.login" timestamp="1587671985095">
+      <screen x="0" y="0" width="1858" height="1080" />
+    </state>
+    <state x="798" y="433" key="publish.login/-1680.0.1618.1050/0.0.1858.1080/1920.0.1680.1010@0.0.1858.1080" timestamp="1584357268946" />
+    <state x="660" y="330" key="publish.login/0.0.1536.824/-1366.303.1366.728@0.0.1536.824" timestamp="1581515850879" />
+    <state x="798" y="433" key="publish.login/0.0.1858.1080/-1680.14.1618.1050/1920.14.1680.1010@0.0.1858.1080" timestamp="1587671985095" />
+    <state x="2453" y="183" width="813" height="696" key="search.everywhere.popup" timestamp="1587586738081">
+      <screen x="1920" y="0" width="1858" height="1080" />
+    </state>
+    <state x="441" y="140" width="672" height="531" key="search.everywhere.popup/0.0.1536.824/-1366.303.1366.728@0.0.1536.824" timestamp="1582882704423" />
+    <state x="441" y="140" width="672" height="531" key="search.everywhere.popup/0.0.1536.824@0.0.1536.824" timestamp="1584984415060" />
+    <state x="533" y="183" width="813" height="696" key="search.everywhere.popup/1920.0.1858.1080/0.0.1858.1080@0.0.1858.1080" timestamp="1585853450931" />
+    <state x="2453" y="183" width="813" height="696" key="search.everywhere.popup/1920.0.1858.1080/0.0.1858.1080@1920.0.1858.1080" timestamp="1587586738081" />
+  </component>
+</project>
