@@ -254,12 +254,20 @@ def ble_service_checkup():
             subprocess.check_call(["sudo", "kill", "-9", str(pid)], stdout=devnull, stderr=subprocess.STDOUT)
     elif not service_running and not is_set_up:
         # BLE service NOT running, but it should
-        log("Running SimplyPrint BLE setup service")
         try:
-            subprocess.Popen(["sudo python3 /home/pi/SimplyPrint/setup_ble/simplypi_ble_setup.py"], shell=True,
-                             stdin=None, stdout=None, stderr=None, close_fds=True)
+            bluetooth_is_up = os.popen("ps aux | grep bluetooth | grep -v grep | wc -l").read() != "0"
+
+            if bluetooth_is_up:
+                log("Running SimplyPrint BLE setup service")
+                try:
+                    subprocess.Popen(["sudo python3 /home/pi/SimplyPrint/setup_ble/simplypi_ble_setup.py"], shell=True,
+                                     stdin=None, stdout=None, stderr=None, close_fds=True)
+                except:
+                    log("Failed to run BLE setup service")
+            else:
+                log("The Bluetooth service is not yet up - not starting the BLE setup service yet")
         except:
-            log("Failed to run BLE setup service")
+            log("Failed to check whether the Bluetooth service is up or not")
 
 
 ble_service_checkup()
