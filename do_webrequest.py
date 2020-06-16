@@ -243,7 +243,7 @@ def do_the_request():
                             try:
                                 if octoprint_settings["webcam"]["webcamEnabled"]:
                                     the_url = octoprint_settings["webcam"]["snapshotUrl"]
-                                    new_name = "files/" + str(picture_id) + ".png"
+                                    new_name = str(picture_id) + ".png"
 
                                     log("Taking picture...")
                                     the_download = download_file(the_url, new_name)
