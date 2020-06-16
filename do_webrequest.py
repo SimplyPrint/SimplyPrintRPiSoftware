@@ -1,4 +1,22 @@
 # coding=utf-8
+"""
+SimplyPrint
+Copyright (C) 2020  SimplyPrint ApS
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU Affero General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU Affero General Public License for more details.
+
+You should have received a copy of the GNU Affero General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
 __import__('__init__')
 from __init__ import *
 import time
@@ -90,8 +108,11 @@ def do_the_request():
                     set_config()
 
                 if (has_demand("identify_printer") or has_demand("do_gcode")) and has_demand("gcode_code"):
-                    for value in demand_list["gcode_code"]:
-                        print(octoprint_api_req("printer/command", {"command": value}))
+                    try:
+                        for value in demand_list["gcode_code"]:
+                            print(octoprint_api_req("printer/command", {"command": value}))
+                    except:
+                        log("Failed to execute GCODE line(s)")
 
                 # Send OctoPrint api key to server
                 if has_demand("send_octoprint_apikey"):
@@ -230,14 +251,15 @@ def do_the_request():
                                         with open(new_name, "rb") as f:
                                             log("Uploading picture...")
                                             r = requests.post(upl_url, files={"the_file": f})
-                                            json_return = json.loads(r.content)
+                                            json_return = r.json()
+
                                             if json_return is not None:
                                                 if json_return["status"]:
                                                     log("Picture taken and uploaded successfully!")
                                                 else:
-                                                    log("Failed to upload picture; " + r.content)
+                                                    log("Failed to upload picture; " + str(r.content))
                                             else:
-                                                log("Request failed; " + r.content)
+                                                log("Request failed; " + str(r.content))
 
                                         if os.path.isfile(new_name):
                                             os.remove(new_name)
@@ -379,6 +401,7 @@ successful_requests = 0
 failed_requests = 0
 while i < times_a_minute:
     print("Request...")
+
     if time.time() - start_time < 58:  # Don't continue for more than a minute - a new cron job will take over
         the_request = do_the_request()
         total_requests += 1
