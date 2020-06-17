@@ -624,7 +624,7 @@ def process_file_request(download_url):
     log(" - Free space; " + str(free_space))
 
     log(" - deleting old files...")
-    # Delete all old Octoprint files
+    # Delete all old OctoPrint files
     the_headers = {
         "Content-Type": "application/json",
         "X-Api-Key": octoprint_apikey(),
@@ -641,7 +641,7 @@ def process_file_request(download_url):
     if the_download[0]:
         log(" - Successfully downloaded file to; " + new_file_dest)
 
-        # Uploading through the Octoprint API helps metadata be created correctly, and events be fired
+        # Uploading through the OctoPrint API helps metadata be created correctly, and events be fired
         the_upload = upload_file(new_file_dest, new_filename)
 
         log(" - File upload finished")
@@ -741,7 +741,7 @@ def sync_settings_with_plugin():
 
                         hasmodified = True
                 else:
-                    log("Octoprint plugin is not installed (or just disabled)", "error")
+                    log("OctoPrint plugin is not installed (or just disabled)", "error")
             else:
                 log("Cannot get OctoPrint plugins", "error")
         else:
@@ -788,7 +788,7 @@ def set_config():
             except:
                 pass
 
-        # "Sync" data with the Octoprint plugin - this is the way these scripts and the plugin communicate
+        # "Sync" data with the OctoPrint plugin - this is the way these scripts and the plugin communicate
         post_data = {
             "webcam": {
                 "webcamEnabled": True,

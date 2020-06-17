@@ -93,7 +93,7 @@ def get_octoprint_details():
 
 '''
 camera_support = "0"
-# Not relevant for Octoprint
+# Not relevant for OctoPrint
 camera_check = subprocess.check_output(["vcgencmd", "get_camera"])
 
 if camera_check.find("supported=1") != -1:
@@ -116,7 +116,7 @@ def set_octoprint_settings():
                 if request_check.status_code == 200:
                     has_camera = "1"
             else:
-                # Octoprint "Enable webcam support" checkbox is unticked - check it
+                # OctoPrint "Enable webcam support" checkbox is unticked - check it
                 log("STARTUP - OctoPrint didn't have webcam support ticked - enabling it")
                 hasmodified = True
                 set_config()
