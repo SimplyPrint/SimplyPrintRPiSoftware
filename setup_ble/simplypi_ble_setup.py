@@ -21,10 +21,14 @@ import dbus
 import os
 import socket
 import configparser
-
+import time
 from advertisement import Advertisement
 from service import Application, Service, Characteristic, Descriptor
 import json
+
+# Despite efforts to make this script execute AFTER the Bluetooth service, and checking whether BLE is up,
+# a delay seems to be necessary for the device to be discoverable
+time.sleep(10)
 
 GATT_CHRC_IFACE = "org.bluez.GattCharacteristic1"
 NOTIFY_TIMEOUT = 5000
