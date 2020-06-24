@@ -609,7 +609,7 @@ def upload_file(file_to_upload, dest_filename):
 
 def process_file_request(download_url):
     the_filename, file_extension = os.path.splitext(download_url)
-    new_filename = str(uuid.uuid1()) + str(file_extension)
+    new_filename = str(uuid.uuid1()) + ".gcode"
     new_file_dest = os.path.join(temp_files_path, new_filename)
     free_space = octoprint_api_req("files/local")["free"]
 
