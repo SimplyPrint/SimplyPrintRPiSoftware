@@ -360,7 +360,6 @@ def do_the_request():
                         file_name = ""
 
                         if p_state == "Operational":
-                            website_ping_update("&file_seen=true")
                             set_display("Preparing...", True)
 
                             the_download_url = demand_list["print_file"]
