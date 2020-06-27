@@ -103,17 +103,9 @@ class NetworkCharacteristic(Characteristic):
             with open('../../../../etc/wpa_supplicant/wpa_supplicant.conf', 'r') as myFile:
                 self.content = myFile.read()
             with open('../../../../etc/wpa_supplicant/wpa_supplicant.conf', 'w') as myFile:
-                if self.content.find('ssid="') != -1:
-                    ssid_index = self.content.find('ssid="') + 6
-                    ssid_last_index = self.content.find('"', ssid_index)
-                    psk_index = self.content.find('psk="') + 5
-                    psk_last_index = self.content.find('"', psk_index)
-                    new_content = self.content[:ssid_index] + self.ssid + self.content[ssid_last_index:psk_index] + \
-                                  self.thepass + self.content[psk_last_index:]
-                    myFile.write(new_content)
-                    print(new_content)
-                else:
-                    print('else')
+                temp_str = '# WPA/WPA2 secured /n network={ /n   ssid="' + self.ssid + '" /n   psk="' + self.thepass + '" /n } /n'
+                newContent = temp_str + self.content
+                myFile.write(newContent)
             os.system("sudo reboot")
 
     def ReadValue(self, options):
