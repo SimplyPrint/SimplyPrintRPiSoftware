@@ -245,15 +245,18 @@ def ble_service_checkup():
     is_set_up = config.getboolean("info", "is_set_up")
     var = os.popen("ps ax | grep 'simplypi_ble_setup.py' | grep -v grep").read()
     service_running = len(var) != 0
-    # no_wifi = not has_internet()
-    no_wifi = False
+    no_wifi = not has_internet()
 
     if service_running and is_set_up and not no_wifi:
         # BLE service is running while the system is set up - it should not
         pid = int(os.popen("cat /tmp/simplypi_ble_service_pid").read())
         log("Killing SimplyPrint BLE setup service with ID; " + str(pid))
-        with open(os.devnull, "wb") as devnull:
-            subprocess.check_call(["sudo", "kill", "-9", str(pid)], stdout=devnull, stderr=subprocess.STDOUT)
+        try:
+            with open(os.devnull, "wb") as devnull:
+                subprocess.check_call(["sudo", "kill", "-9", str(pid)], stdout=devnull, stderr=subprocess.STDOUT)
+        except:
+            # Process doesn't exist (probably)
+            pass
     elif (not service_running and not is_set_up) or no_wifi:
         # BLE service NOT running, but it should
         try:
