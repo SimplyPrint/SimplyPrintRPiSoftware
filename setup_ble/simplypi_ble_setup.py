@@ -103,7 +103,7 @@ class NetworkCharacteristic(Characteristic):
             with open('../../../../etc/wpa_supplicant/wpa_supplicant.conf', 'r') as myFile:
                 self.content = myFile.read()
             with open('../../../../etc/wpa_supplicant/wpa_supplicant.conf', 'w') as myFile:
-                temp_str = '# WPA/WPA2 secured /n network={ /n   ssid="' + self.ssid + '" /n   psk="' + self.thepass + '" /n } /n'
+                temp_str = '\n# WPA/WPA2 secured \n network={ \n   ssid="' + self.ssid + '" \n   psk="' + self.thepass + '" \n } \n'
                 newContent = temp_str + self.content
                 myFile.write(newContent)
             os.system("sudo reboot")
