@@ -28,7 +28,7 @@ import socket
 import sys
 import subprocess
 
-system_version = "1.9.4"
+system_version = "1.9.6"
 api_version = "0.0.2"
 
 
@@ -255,7 +255,7 @@ def ble_service_checkup():
     elif not service_running and not is_set_up:
         # BLE service NOT running, but it should
         try:
-            bluetooth_is_up = os.system('systemctl is-active --quiet bluetooth')
+            bluetooth_is_up = os.system('systemctl is-active bluetooth')
 
             if str(bluetooth_is_up) == "0":
                 log("Running SimplyPrint BLE setup service")
@@ -265,7 +265,7 @@ def ble_service_checkup():
                 except:
                     log("Failed to run BLE setup service")
             else:
-                log("The Bluetooth service is not yet up - not starting the BLE setup service yet")
+                log("The Bluetooth service is not yet up (" + str(bluetooth_is_up) + ") - not starting the BLE setup service yet")
         except:
             log("Failed to check whether the Bluetooth service is up or not")
 
