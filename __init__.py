@@ -246,7 +246,7 @@ def ble_service_checkup():
     var = os.popen("ps ax | grep 'simplypi_ble_setup.py' | grep -v grep").read()
     service_running = len(var) != 0
     # no_wifi = not has_internet()
-    no_wifi = True
+    no_wifi = False
 
     if service_running and is_set_up and not no_wifi:
         # BLE service is running while the system is set up - it should not

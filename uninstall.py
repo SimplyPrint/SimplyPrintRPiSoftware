@@ -12,28 +12,25 @@ for job in cron:
 
 cron.write()
 
-tmp_uninstall_script = "/tmp/uninstall_simplyprint.sh"
+tmp_uninstall_script = "/tmp/uninstall_simplprint.sh"
+
+# TODO; kill all running SimplyPrint scripts
 
 if os.path.exists(tmp_uninstall_script):
     os.remove(tmp_uninstall_script)
 
-if os.path.exists("/home/pi/simplyprint_rpi_id.txt"):
-    os.remove("/home/pi/simplyprint_rpi_id.txt")
-
-if os.path.exists("/tmp/SimplyPrintUpdater.sh"):
-    os.remove("/tmp/SimplyPrintUpdater.sh")
-
-if os.path.exists("/tmp/simplypi_ble_service_pid"):
-    os.remove("/tmp/simplypi_ble_service_pid")
-
 f = open(tmp_uninstall_script, "a")
 f.write("sleep 1\n")
-f.write(
-    "sudo /home/pi/oprint/bin/python2 -m pip --disable-pip-version-check install SimplyPrint-OctoPrint-Plugin.zip 2>&1\n")
-f.write(
-    "sudo /home/pi/oprint/bin/python3 -m pip3 --disable-pip-version-check install SimplyPrint-OctoPrint-Plugin.zip 2>&1\n")
-f.write("sudo rm -rf /home/pi/SimplyPrint 2>&1\n")
+f.write("cd /\n")
+f.write("sudo rm -f /home/pi/simplyprint_rpi_id.txt\n")
+f.write("sudo rm -f /tmp/SimplyPrintUpdater.sh\n")
+f.write("sudo rm -f /tmp/simplypi_ble_service_pid\n")
+f.write("yes | sudo /home/pi/oprint/bin/pip uninstall SimplyPrint\n")
+f.write("sudo rm -rf /home/pi/SimplyPrint\n")
+f.write("printf \"SimplyPrint uninstalled - we're sad to see you go! :(\"\n")
 f.write("rm -- \"$0\"\n")
+f.write("exit 0\n")
 f.close()
 
 subprocess.Popen(["sudo", "bash", tmp_uninstall_script])
+print("Cron jobs removed and uninstall script started")
