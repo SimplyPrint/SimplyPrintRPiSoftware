@@ -345,7 +345,7 @@ def get_request(url, no_json=False, is_api_request=False):
             json_content = json.loads(content.decode("utf-8"))
             return json_content
         except:
-            log("[ERROR] - Failed to jsonify request")
+            log("[ERROR] - Failed to jsonify request; " + str(content.decode("utf-8")))
             return False
 
 
@@ -497,6 +497,16 @@ def website_ping_update(extra_parameters=None):
 
     printer_info = get_printer()
     p_state = get_printer_state()
+
+    if printer_info is None:
+        # Check if OctoPrint is set up
+        try:
+            check = octoprint_api_req("printer/command", {}, True)
+            if check.text == "OctoPrint isn't setup yet":
+                log("OctoPrint is not set up - letting server know")
+                base_url += "&octoprint_not_set_up"
+        except:
+            pass
 
     is_in_setup = not config.getboolean("info", "is_set_up")
     '''if not is_in_setup:
