@@ -625,7 +625,7 @@ def upload_file(file_to_upload, dest_filename):
 
 def process_file_request(download_url):
     the_filename, file_extension = os.path.splitext(download_url)
-    new_filename = str(uuid.uuid1()) + ".gcode"
+    new_filename = "sp_" + str(uuid.uuid1()) + ".gcode"
     new_file_dest = os.path.join(temp_files_path, new_filename)
     free_space = octoprint_api_req("files/local")["free"]
 
@@ -635,7 +635,7 @@ def process_file_request(download_url):
 
     return_msg = ""
 
-    log("[DOWNLOADING, UPLOADING AND POSSIBLY SLICING FILE!]")
+    log("[DOWNLOADING AND UPLOADING]")
     log(" - New filename is; " + new_filename)
     log(" - Free space; " + str(free_space))
 
@@ -649,7 +649,8 @@ def process_file_request(download_url):
     the_files_req = octoprint_api_req("files")
     if the_files_req is not None:
         for value in the_files_req["files"]:
-            requests.delete(value["refs"]["resource"], headers=the_headers, verify=False)
+            if str(value["display"][:3]) == "sp_":
+                requests.delete(value["refs"]["resource"], headers=the_headers, verify=False)
 
     log(" - old files deleted")
 
