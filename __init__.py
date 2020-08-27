@@ -28,7 +28,7 @@ import socket
 import sys
 import subprocess
 
-system_version = "1.9.9"
+system_version = "2.1.0"
 api_version = "0.0.2"
 
 
@@ -286,7 +286,7 @@ def octoprint_apikey():
         return "null"
 
 
-def get_request(url, no_json=False, is_api_request=False):
+def get_request(url, no_json=False, is_api_request=False, get_response_code=False):
     global http
 
     url = url.replace(" ", "%20")
@@ -307,11 +307,19 @@ def get_request(url, no_json=False, is_api_request=False):
                 http = urllib3.PoolManager()
 
             the_request = http.request("GET", url, headers=hdr)
-            content = the_request.data
+
+            if not get_response_code:
+                content = the_request.data
+            else:
+                content = the_request.status
         else:
             req = urllib2.Request(url, headers=hdr)
             the_request = urllib2.urlopen(req)
-            content = the_request.read()
+
+            if not get_response_code:
+                content = the_request.read()
+            else:
+                content = the_request.getcode()
 
         the_request.close()
     except Exception as e:
@@ -349,7 +357,7 @@ def get_request(url, no_json=False, is_api_request=False):
             return False
 
 
-def post_request(url, postobj, no_json=False, custom_header=None):
+def post_request(url, postobj, no_json=False, custom_header=None, return_response=False, is_patch=False):
     # import requests
 
     if custom_header is None:
@@ -361,28 +369,39 @@ def post_request(url, postobj, no_json=False, custom_header=None):
         headers = custom_header
 
     try:
-        x = requests.post(url, data=json.dumps(postobj), headers=headers, verify=False)
-        if no_json:
-            return x
+        if not is_patch:
+            x = requests.post(url, data=json.dumps(postobj), headers=headers, verify=False)
         else:
-            if is_py_3():
-                content = x.json()
+            x = requests.patch(url, data=json.dumps(postobj), headers=headers, verify=False)
+
+        if no_json:
+            if return_response:
+                return x.status_code
             else:
-                content = json.loads(x.text)
+                return x
+        else:
+            if not return_response:
+                if is_py_3():
+                    content = x.json()
+                else:
+                    content = json.loads(x.text)
+            else:
+                content = x.status_code
 
             return content
     except:
         return False
 
 
-def octoprint_api_req(api_file, post_data=None, no_json=False, custom_header=None):
+def octoprint_api_req(api_file, post_data=None, no_json=False, custom_header=None, get_response_code=False,
+                      is_patch=False):
     global config
     the_url = "http://localhost/api/" + api_file + "?apikey=" + octoprint_apikey()
 
     if post_data is None:
-        content = get_request(the_url, no_json, True)
+        content = get_request(the_url, no_json, True, get_response_code)
     else:
-        content = post_request(the_url, post_data, no_json, custom_header)
+        content = post_request(the_url, post_data, no_json, custom_header, get_response_code, is_patch)
 
     if content is not False:
         return content

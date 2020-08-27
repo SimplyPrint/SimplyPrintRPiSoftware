@@ -230,7 +230,69 @@ def do_the_request():
 
                     if has_demand("update_octoprint", False):
                         set_display("Updating OctoPrint", True)
-                        # /home/pi/oprint/bin/python2 -m pip --disable-pip-version-check install https://github.com/foosel/OctoPrint/archive/1.4.0.zip --no-cache-dir
+                        # /home/pi/oprint/bin/python2 -m pip --disable-pip-version-check install
+                        # https://github.com/foosel/OctoPrint/archive/1.4.0.zip --no-cache-dir
+
+                    if has_demand("octoprint_plugin_action", False):
+                        # OctoPrint plugin actions!
+                        for action in demand_list["octoprint_plugin_action"]:
+                            if action["type"] == "install":
+                                # Add plugin to "Installed by SimplyPrint" list
+                                log("Installing OctoPrint plugin " + action["name"] + "!")
+
+                                with open("sp_installed_plugins.txt", "a") as myfile:
+                                    myfile.write(action["name"])
+
+                                # "Notify" plugin of plugins installed through SimplyPrint!
+                                sp_plugins = []
+                                if os.path.isfile("sp_installed_plugins.txt"):
+                                    with open("sp_installed_plugins.txt") as f:
+                                        for line in f:
+                                            sp_plugins.append(line)
+
+                                # Post the new settings to the plugin
+                                octoprint_api_req("settings", {
+                                    "plugins": {
+                                        octoprint_plugin_name: {
+                                            "sp_installed_plugins": sp_plugins,
+                                        }
+                                    }
+                                })
+
+                                os.system(
+                                    "yes | sudo /home/pi/oprint/bin/pip install \"" + action["install_url"] + "\"")
+                                os.system("sudo service octoprint restart")
+                                pass
+                            elif action["type"] == "uninstall":
+                                os.system(
+                                    "yes | sudo /home/pi/oprint/bin/pip uninstall \"" + action["name"].replace(
+                                        " ", "-") + "\"")
+                                os.system("sudo service octoprint restart")
+                            elif action["type"] == "set_settings":
+                                # Update OctoPrint settings (plugin or not)
+                                octoprint_api_req("settings", action["settings"])
+
+                                if action["restart"]:
+                                    os.system("sudo service octoprint restart")
+                            pass
+                        pass
+
+                    if has_demand("set_printer_profile", False):
+                        data = {"profile": demand_list["set_printer_profile"]}
+
+                        if octoprint_api_req("printerprofiles/sp_printer", None, True, None, True) == 404:
+                            # Printer profile doesn't exist - create it
+                            data["profile"]["id"] = "sp_printer"
+                            the_return = octoprint_api_req("printerprofiles", data, True, None, True)
+                        else:
+                            # Printer profile exists - update
+                            the_return = octoprint_api_req("printerprofiles/sp_printer", data, True, None, True, True)
+
+                        if the_return == 200:
+                            website_ping_update("&type_settings_fetched")
+                        else:
+                            log("Failed to update printer type settings :/")
+                            log(str(the_return))
 
                     if has_demand("take_picture"):
                         log("Should take picture!")
