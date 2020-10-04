@@ -29,6 +29,92 @@ times_a_minute = config.getint("info", "requests_per_minute")
 demand_list = None
 request_settings_next_time = False
 
+plugin_settings_awaiting = []
+last_awaiting_plugin_set = None
+has_checked_safemode = False
+
+
+def check_has_update():
+    global times_a_minute, demand_list, request_settings_next_time, last_request_response_code, dir_path, last_awaiting_plugin_set
+
+    if has_demand("update_system"):
+        # Update SimplyPrint system!
+        log("Updating system...")
+        set_display("Updating...", True)
+
+        download_url = request_url + "software/update_script.sh"
+        the_filename, file_extension = os.path.splitext(download_url)
+        new_filename = str("system_updater") + str(file_extension)
+        new_file_loc = os.path.join("/tmp/", new_filename)
+
+        try:
+            if os.path.exists(new_file_loc):
+                os.remove(new_file_loc)
+        except Exception as e:
+            msg = "Failed to remove file at; " + new_file_loc + ". Error; " + str(e)
+            log(msg)
+            website_ping_update("&system_update_failed=" + url_quote(msg))
+            return False
+
+        clear_installation_files()
+
+        log("Downloading from; " + download_url)
+        log("Downloading to; " + new_file_loc)
+        the_download = download_file(download_url, new_file_loc, True)
+        if the_download[0]:
+            log("Got new install file! - installing!")
+            set_display("Installing...", True)
+
+            try:
+                # Remove cron jobs
+                from crontab import CronTab
+
+                cron = CronTab(user=True)
+
+                for job in cron:
+                    print(job.comment.lower())
+                    if "[simplyprint" in job.comment.lower() and "[simplyprint keep]" not in job.comment.lower():
+                        cron.remove(job)
+
+                cron.write()
+            except:
+                log("Failed to clean up cron jobs")
+
+            try:
+                # Run installation file
+                subprocess.call(["sudo", "bash", "/tmp/system_updater.sh"])
+            except subprocess.CalledProcessError as e:
+                msg = "Failed to open system updater file. Error; " + str(e)
+                log(msg)
+                website_ping_update("&system_update_failed=" + msg)
+                return False
+
+            # Didn't exit - means update has started; tell system and then exit
+            website_ping_update("&system_update_started=true")
+            time.sleep(2)
+            sys.exit()
+        else:
+            set_display("Update failed", True)
+            msg = "Couldn't download file... Got; " + str(the_download[1])
+            log(msg)
+            website_ping_update("&system_update_failed=" + msg)
+            return False
+
+
+def process_pending_settings():
+    global last_awaiting_plugin_set, plugin_settings_awaiting
+
+    if len(plugin_settings_awaiting) > 0 and isinstance(last_awaiting_plugin_set,
+                                                        float) and time.time() > last_awaiting_plugin_set + 10:
+        # There are plugin settings awaiting being set!
+        for set_setting in plugin_settings_awaiting:
+            check = octoprint_api_req("settings", set_setting, True, None, True)
+            if check == 200:
+                log("Waited and set the settings for a plugin!")
+                plugin_settings_awaiting.remove(set_setting)
+            else:
+                log("Failed to set settings... " + str(check))
+
 
 def has_demand(demand, check_true=True):
     global demand_list
@@ -39,7 +125,7 @@ def has_demand(demand, check_true=True):
 
 
 def do_the_request():
-    global times_a_minute, demand_list, request_settings_next_time
+    global times_a_minute, demand_list, request_settings_next_time, last_request_response_code, dir_path, last_awaiting_plugin_set, has_checked_safemode
 
     reset_api_cache()
     rpi_id = get_rpid()
@@ -110,7 +196,7 @@ def do_the_request():
                 if (has_demand("identify_printer") or has_demand("do_gcode")) and has_demand("gcode_code"):
                     try:
                         for value in demand_list["gcode_code"]:
-                            print(octoprint_api_req("printer/command", {"command": value}))
+                            print(octoprint_api_req("printer/command", {"command": value}, True, None, True))
                     except:
                         log("Failed to execute GCODE line(s)")
 
@@ -130,14 +216,53 @@ def do_the_request():
                     else:
                         # log("Printer is not set up.")
                         if has_demand("printer_set_up"):
+                            # Printer has now been set up! Out of setup mode we go
                             log("Set to 'is set up'!")
                             set_config_key("info", "is_set_up", "True")
+                            set_config_key("info", "safemode_check_next", "0")
                             set_config()
                             set_display("Set up!", True)
                         else:
+                            # Still not set up
                             if config.get("info", "temp_short_setup_id") != the_json["printer_set_up_short_id"]:
                                 set_config_key("info", "temp_short_setup_id", the_json["printer_set_up_short_id"])
                                 set_config()
+
+                            # Check for safe mode (OctoPrint sometimes starts in safe mode on first boot...)
+                            if not has_checked_safemode:
+                                has_checked_safemode = True
+                                safemode_check = octoprint_api_req("plugin/pluginmanager")
+                                if safemode_check is not None:
+                                    for plugin in safemode_check["plugins"]:
+                                        if plugin["safe_mode_victim"]:
+                                            # Don't end up in a restart loop...
+                                            safe_checks = config.getint("info", "safemode_check_next")
+                                            if safe_checks == 0:
+                                                # OctoPrint is in safe mode! Restart!
+                                                log("OctoPrint was in safe mode - probably not on purpose, restarting")
+                                                set_config_key("info", "safemode_check_next", "1")
+                                                set_config()
+                                                os.system("sudo service octoprint restart")
+                                            else:
+                                                # Has forced it out of safe mode once, but it's back :/
+                                                log("OctoPrint is STILL in safe mode!")
+
+                                                if safe_checks >= 10:
+                                                    # Has been in safe mode for 10 minutes - try getting it out again!
+                                                    log("Has been 10 minutes, trying to get OP out of safe mode")
+                                                    set_config_key("info", "safemode_check_next", "0")
+                                                    os.system("sudo service octoprint restart")
+                                                else:
+                                                    log("Still in safe mode...")
+                                                    new_checks = safe_checks + 1
+                                                    set_config_key("info", "safemode_check_next", str(new_checks))
+
+                                                set_config()
+                                            break
+
+                            # If there's a newer version of SimplyPrint; download it right away
+                            if check_has_update() == False:
+                                return False
 
                             set_display(the_json["printer_set_up_short_id"])
 
@@ -233,22 +358,37 @@ def do_the_request():
                         # /home/pi/oprint/bin/python2 -m pip --disable-pip-version-check install
                         # https://github.com/foosel/OctoPrint/archive/1.4.0.zip --no-cache-dir
 
+                    if has_demand("psu_on") or has_demand("psu_keepalive"):
+                        # Turn power controller ON
+                        octoprint_api_req("plugin/simplypowercontroller", {"command": "turnPSUOn"}, True)
+
+                    if has_demand("psu_off"):
+                        # Turn power controller OFF
+                        octoprint_api_req("plugin/simplypowercontroller", {"command": "turnPSUOff"}, True)
+
                     if has_demand("octoprint_plugin_action", False):
+                        installed_plugins = []
+                        plugins_txt = os.path.join(dir_path, "sp_installed_plugins.txt")
+
+                        do_restart_octoprint = False
+
                         # OctoPrint plugin actions!
                         for action in demand_list["octoprint_plugin_action"]:
                             if action["type"] == "install":
                                 # Add plugin to "Installed by SimplyPrint" list
                                 log("Installing OctoPrint plugin " + action["name"] + "!")
+                                installed_plugins.append(action["key"])
 
-                                with open("sp_installed_plugins.txt", "a") as myfile:
-                                    myfile.write(action["name"])
+                                with open(plugins_txt, "a") as myfile:
+                                    myfile.write(action["name"] + "\n")
 
                                 # "Notify" plugin of plugins installed through SimplyPrint!
                                 sp_plugins = []
-                                if os.path.isfile("sp_installed_plugins.txt"):
-                                    with open("sp_installed_plugins.txt") as f:
+                                if os.path.isfile(plugins_txt):
+                                    with open(plugins_txt) as f:
                                         for line in f:
-                                            sp_plugins.append(line)
+                                            if len(line) and (line.strip() not in sp_plugins):
+                                                sp_plugins.append(line.strip())
 
                                 # Post the new settings to the plugin
                                 octoprint_api_req("settings", {
@@ -259,23 +399,75 @@ def do_the_request():
                                     }
                                 })
 
+                                # Install through pip, and restart OctoPrint
                                 os.system(
-                                    "yes | sudo /home/pi/oprint/bin/pip install \"" + action["install_url"] + "\"")
-                                os.system("sudo service octoprint restart")
-                                pass
+                                    "yes | sudo /home/pi/oprint/bin/pip uninstall \"" + action["install_url"] + "\"")
+
+                                os.system(
+                                    "yes | sudo -u pi /home/pi/oprint/bin/pip install \"" + action[
+                                        "install_url"] + "\"")
+
+                                do_restart_octoprint = True
                             elif action["type"] == "uninstall":
+                                sp_plugins = []
+
+                                if os.path.isfile(plugins_txt):
+                                    # Get current plugins
+                                    log("Uninstalling OctoPrint plugin; " + action["name"])
+
+                                    with open(plugins_txt, "r") as f:
+                                        for line in f:
+                                            stripped_line = line.strip()
+                                            if len(line) and stripped_line != action["name"].strip():
+                                                if stripped_line not in sp_plugins:
+                                                    sp_plugins.append(line.strip())
+
+                                    # Post to the plugin
+                                    octoprint_api_req("settings", {
+                                        "plugins": {
+                                            octoprint_plugin_name: {
+                                                "sp_installed_plugins": sp_plugins,
+                                            }
+                                        }
+                                    })
+
+                                    # Set new list not containing the about-to-be-deleted one
+                                    with open(plugins_txt, "w") as f:
+                                        for line in sp_plugins:
+                                            f.write(line + "\n")
+
                                 os.system(
-                                    "yes | sudo /home/pi/oprint/bin/pip uninstall \"" + action["name"].replace(
+                                    "yes | sudo /home/pi/oprint/bin/pip uninstall \"" + action["pip_name"].replace(
                                         " ", "-") + "\"")
-                                os.system("sudo service octoprint restart")
+                                do_restart_octoprint = True
                             elif action["type"] == "set_settings":
                                 # Update OctoPrint settings (plugin or not)
-                                octoprint_api_req("settings", action["settings"])
+                                print(installed_plugins)
+                                if "plugin_key" in action and action["plugin_key"] in installed_plugins:
+                                    # Wait till plugin has actually been installed!
+                                    log("Gonna wait until plugin is properly installed to set the settings!")
+                                    plugin_settings_awaiting.append(action["settings"])
+                                    last_awaiting_plugin_set = time.time()
+                                else:
+                                    log("Setting some settings right away!")
 
-                                if action["restart"]:
-                                    os.system("sudo service octoprint restart")
-                            pass
-                        pass
+                                    check = octoprint_api_req("settings", action["settings"], True, None, True)
+                                    if check == 200:
+                                        log("Settings saved")
+                                    else:
+                                        log("Failed to set settings right away... Status; " + str(check))
+                                        plugin_settings_awaiting.append(action["settings"])
+                                        last_awaiting_plugin_set = time.time()
+
+                                if "restart" in action and action["restart"]:
+                                    do_restart_octoprint = True
+
+                        # End loop
+                        if do_restart_octoprint:
+                            os.system("sudo service octoprint restart")
+                    else:
+                        # No plugins to install or settings to set
+                        process_pending_settings()
 
                     if has_demand("set_printer_profile", False):
                         data = {"profile": demand_list["set_printer_profile"]}
@@ -294,6 +486,76 @@ def do_the_request():
                             log("Failed to update printer type settings :/")
                             log(str(the_return))
 
+                    # Sync GCODE profiles (send backups)
+                    if has_demand("get_gcode_script_backups"):
+                        if not config.getboolean("info", "gcode_scripts_backed_up"):
+                            # Check if user has GCODE scripts in OctoPrint that should be backed up
+                            current_resume_gcode = ""
+                            current_pause_gcode = ""
+                            current_cancel_gcode = ""
+
+                            default_cancel_gcode = ";disable motorsM84;disable all heaters{% snippet 'disable_hotends' %}{% snippet 'disable_bed' %};disable fanM106 S0"
+
+                            if "script" in octoprint_settings and "gcode" in octoprint_settings["scripts"]:
+                                if "afterPrintCancelled" in octoprint_settings["scripts"]["gcode"]:
+                                    current_cancel_gcode = octoprint_settings["scripts"]["gcode"]["afterPrintCancelled"]
+
+                                    if current_cancel_gcode.replace(" ", "").replace("\n", "") == default_cancel_gcode:
+                                        # Cancel GCODE is the stock - just pretend it's empty
+                                        current_cancel_gcode = ""
+
+                                if "beforePrintResumed" in octoprint_settings["scripts"]["gcode"]:
+                                    current_resume_gcode = octoprint_settings["scripts"]["gcode"]["beforePrintResumed"]
+
+                                if "afterPrintPaused" in octoprint_settings["scripts"]["gcode"]:
+                                    current_pause_gcode = octoprint_settings["scripts"]["gcode"]["afterPrintPaused"]
+
+                            if current_cancel_gcode or current_resume_gcode or current_pause_gcode:
+                                # One or all of the GCODE scripts we want to overwrite have values - sync with server!
+                                website_ping_update("&gcode_scripts_backed_up=" + url_quote(json.dumps({
+                                    "cancel_gcode": current_cancel_gcode,
+                                    "pause_gcode": current_pause_gcode,
+                                    "resume_gcode": current_resume_gcode,
+                                })))
+                            else:
+                                # No backups needed - user has not set anything
+                                website_ping_update("&no_gcode_script_backup_needed")
+
+                            set_config_key("info", "gcode_scripts_backed_up", "True")
+                            set_config()
+
+                    # Sync GCODE profiles (GET scripts!)
+                    if has_demand("has_gcode_changes", False):
+                        # print(demand_list["has_gcode_changes"])
+                        lst = demand_list["has_gcode_changes"]
+
+                        if "cancel" in lst and "pause" in lst and "resume" in lst:
+                            try:
+                                the_data = {
+                                    "scripts": {
+                                        "gcode": {
+                                            "afterPrintCancelled": "\n".join(
+                                                demand_list["has_gcode_changes"]["cancel"]),
+                                            "afterPrintPaused": "\n".join(demand_list["has_gcode_changes"]["pause"]),
+                                            "beforePrintResumed": "\n".join(demand_list["has_gcode_changes"]["resume"]),
+                                        }
+                                    }
+                                }
+                            except:
+                                the_data = None
+
+                            if the_data is not None:
+                                print(demand_list)
+
+                                the_return = octoprint_api_req("settings", the_data, True, None, True)
+
+                                if the_return == 200:
+                                    log("Synced GCODE scripts with server")
+                                    website_ping_update("&gcode_scripts_fetched")
+                                else:
+                                    log("Failed to update OctoPrint settings with new GCODE scripts...")
+
+                    # Take picture - camera stuff
                     if has_demand("take_picture"):
                         log("Should take picture!")
 
@@ -340,50 +602,8 @@ def do_the_request():
                             log("[Take picture {" + picture_id + "}] failed; " + picture_err_msg)
                             get_request(upl_url + "&err_msg=" + picture_err_msg, True)
 
-                    if has_demand("update_system"):
-                        # Update SimplyPrint system!
-                        log("Updating system...")
-                        set_display("Updating...", True)
-
-                        download_url = request_url + "software/update_script.sh"
-                        the_filename, file_extension = os.path.splitext(download_url)
-                        new_filename = str("system_updater") + str(file_extension)
-                        new_file_loc = os.path.join("/tmp/", new_filename)
-
-                        try:
-                            if os.path.exists(new_file_loc):
-                                os.remove(new_file_loc)
-                        except Exception as e:
-                            msg = "Failed to remove file at; " + new_file_loc + ". Error; " + str(e)
-                            log(msg)
-                            website_ping_update("&system_update_failed=" + url_quote(msg))
-                            return False
-
-                        clear_installation_files()
-
-                        log("Downloading from; " + download_url)
-                        log("Downloading to; " + new_file_loc)
-                        the_download = download_file(download_url, new_file_loc, True)
-                        if the_download[0]:
-                            log("Yay got new install file! - installing!")
-                            set_display("Installing...", True)
-                            try:
-                                subprocess.call(["sudo", "bash", "/tmp/system_updater.sh"])
-                            except subprocess.CalledProcessError as e:
-                                msg = "Failed to open system updater file. Error; " + str(e)
-                                log(msg)
-                                website_ping_update("&system_update_failed=" + msg)
-                                return False
-
-                            website_ping_update("&system_update_started=true")
-                            time.sleep(2)
-                            sys.exit()
-                        else:
-                            set_display("Update failed", True)
-                            msg = "Couldn't download file... Got; " + str(the_download[1])
-                            log(msg)
-                            website_ping_update("&system_update_failed=" + msg)
-                            return False
+                    if check_has_update() == False:
+                        return False
 
                     if has_demand("connect_printer"):
                         check_connect_printer()
@@ -488,3 +708,12 @@ else:
         set_display("Requests failed", True)
     else:
         set_display("No internet", True)
+
+if len(plugin_settings_awaiting) > 0:
+    log("Requests are done, but a plugin has been installed which awaits a settings change! Waitin for that")
+    while len(plugin_settings_awaiting) > 0:
+        print("Trying again...")
+        process_pending_settings()
+        time.sleep(1)
+
+    log("Settings set!")

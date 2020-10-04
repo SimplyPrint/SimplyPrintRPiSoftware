@@ -28,8 +28,8 @@ import socket
 import sys
 import subprocess
 
-system_version = "2.1.0"
-api_version = "0.0.2"
+system_version = "2.1.1"
+api_version = "0.0.3"
 
 
 def is_py_3():
@@ -74,6 +74,7 @@ __global_printer__ = None
 is_serial_connecting = False
 octoprint_settings = None
 http = None
+last_request_response_code = None
 
 if not os.path.exists(temp_files_path):
     os.makedirs(temp_files_path)
@@ -178,7 +179,9 @@ required_sections = {
         "last_connection_attempt": "0",
         "temp_short_setup_id": "",
         "octoprint_down": "False",
-        "last_user_settings_sync": "0000-00-00 00:00:00"
+        "last_user_settings_sync": "0000-00-00 00:00:00",
+        "gcode_scripts_backed_up": "False",
+        "safemode_check_next": "0"
     },
     "settings": {
         "display_enabled": "True",
@@ -223,7 +226,7 @@ def get_octoprint_api_key():
                 log("The OctoPrint API key is; " + the_key)
 
                 if config.get("octoprint", "apikey") != the_key:
-                    config.set('octoprint', 'apikey', the_key)
+                    config.set("octoprint", "apikey", the_key)
                     hasmodified = True
 
             except yaml.YAMLError as exc:
@@ -241,6 +244,7 @@ def has_internet():
         return False
 
 
+'''
 def ble_service_checkup():
     is_set_up = config.getboolean("info", "is_set_up")
     var = os.popen("ps ax | grep 'simplypi_ble_setup.py' | grep -v grep").read()
@@ -277,6 +281,7 @@ def ble_service_checkup():
 
 
 ble_service_checkup()
+'''
 
 
 def octoprint_apikey():
@@ -286,10 +291,68 @@ def octoprint_apikey():
         return "null"
 
 
-def get_request(url, no_json=False, is_api_request=False, get_response_code=False):
-    global http
+def set_config_key(section, key, value):
+    global hasmodified
+
+    config.set(section, key, value)
+    log("Modified config key; " + section + ", " + key)
+    hasmodified = True
+
+
+# Config stuff
+def set_config():
+    global settings_location, config, hasmodified, octoprint_plugin_name, system_version
+
+    if config.get("octoprint", "apikey") == "null":
+        log("OctoPrint API key is null, getting it from the config...")
+        get_octoprint_api_key()
+
+    if hasmodified:
+        log("Settings were modified. Updating settings.ini file...")
+
+        with open(settings_location, "w") as configfile:
+            config.write(configfile)
+
+        if str(config.get("info", "is_set_up")) == "True":
+            is_set_up = True
+        else:
+            is_set_up = False
+
+        printer_id = 0
+        if config.get("info", "printer_id") is not None:
+            try:
+                printer_id = int(config.get("info", "printer_id"))
+            except:
+                pass
+
+        # "Sync" data with the OctoPrint plugin - this is the way these scripts and the plugin communicate
+        post_data = {
+            "webcam": {
+                "webcamEnabled": True,
+                "timelapseEnabled": True,
+                "watermark": False
+            },
+            "plugins": {
+                octoprint_plugin_name: {
+                    "is_set_up": is_set_up,
+                    "request_url": update_url + "?id=" + get_rpid(),
+                    "rpi_id": str(get_rpid()),
+                    "printer_id": printer_id,
+                    "printer_name": str(config.get("info", "printer_name")),
+                    "simplyprint_version": str(system_version),
+                    "sp_local_installed": True,
+                    "temp_short_setup_id": str(config.get("info", "temp_short_setup_id"))
+                }
+            }
+        }
+        octoprint_api_req("settings", post_data)
+
+
+def get_request(url, no_json=False, is_api_request=False, get_response_code=False, is_octoprint_request=False):
+    global http, last_request_response_code
 
     url = url.replace(" ", "%20")
+    response_code = None
 
     hdr = {
         'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 ' +
@@ -308,13 +371,17 @@ def get_request(url, no_json=False, is_api_request=False, get_response_code=Fals
 
             the_request = http.request("GET", url, headers=hdr)
 
+            response_code = the_request.status
+
             if not get_response_code:
                 content = the_request.data
             else:
-                content = the_request.status
+                content = response_code
         else:
             req = urllib2.Request(url, headers=hdr)
             the_request = urllib2.urlopen(req)
+
+            response_code = the_request.getcode()
 
             if not get_response_code:
                 content = the_request.read()
@@ -346,6 +413,26 @@ def get_request(url, no_json=False, is_api_request=False, get_response_code=Fals
 
         return False
 
+    last_request_response_code = response_code
+
+    # Check if OctoPrint is OK
+    if is_octoprint_request and response_code is not None and int(response_code) in [500, 503]:
+        # OctoPrint is down
+        if not config.getboolean("info", "octoprint_down"):
+            down_to_set = "True"
+            log("OctoPrint is down - waiting to make sure it's really down, "
+                "then restarting")
+        else:
+            down_to_set = "False"
+            log("OctoPrint is STILL down - restarting the OctoPrint service")
+            os.system("sudo service octoprint restart")
+
+        set_config_key("info", "octoprint_down", down_to_set)
+        set_config()
+
+        website_ping_update("&octoprint_status=Shutdown")
+        return False
+
     if no_json:
         return content
     else:
@@ -370,9 +457,9 @@ def post_request(url, postobj, no_json=False, custom_header=None, return_respons
 
     try:
         if not is_patch:
-            x = requests.post(url, data=json.dumps(postobj), headers=headers, verify=False)
+            x = requests.post(url, data=json.dumps(postobj), headers=headers, verify=False, timeout=5)
         else:
-            x = requests.patch(url, data=json.dumps(postobj), headers=headers, verify=False)
+            x = requests.patch(url, data=json.dumps(postobj), headers=headers, verify=False, timeout=5)
 
         if no_json:
             if return_response:
@@ -399,7 +486,7 @@ def octoprint_api_req(api_file, post_data=None, no_json=False, custom_header=Non
     the_url = "http://localhost/api/" + api_file + "?apikey=" + octoprint_apikey()
 
     if post_data is None:
-        content = get_request(the_url, no_json, True, get_response_code)
+        content = get_request(the_url, no_json, True, get_response_code, True)
     else:
         content = post_request(the_url, post_data, no_json, custom_header, get_response_code, is_patch)
 
@@ -600,9 +687,9 @@ def website_ping_update(extra_parameters=None):
 
 
 # Upload, slice & file processing
-def download_file(url, new_name, free_space_check=None):
+def download_file(url, new_name, free_space_check=None, timeout=3):
     try:
-        r = requests.get(url, allow_redirects=True, verify=False)
+        r = requests.get(url, allow_redirects=True, verify=False, timeout=timeout)
     except:
         return [False, "Failed to request url; " + url]
 
@@ -673,7 +760,8 @@ def process_file_request(download_url):
 
     log(" - old files deleted")
 
-    the_download = download_file(download_url, new_file_dest, free_space)
+    # Timeout 30 seconds, might be a large file - allow it to be slow
+    the_download = download_file(download_url, new_file_dest, free_space, 30)
     if the_download[0]:
         log(" - Successfully downloaded file to; " + new_file_dest)
 
@@ -781,71 +869,13 @@ def sync_settings_with_plugin():
             else:
                 log("Cannot get OctoPrint plugins", "error")
         else:
-            log("Can't connect to OctoPrint API", "error")
+            log("Can't connect to OctoPrint API (2)", "error")
     else:
-        log("Can't connect to OctoPrint API", "error")
+        log("Can't connect to OctoPrint API (1)", "error")
 
 
 if not hasmodified:
     sync_settings_with_plugin()
-
-
-def set_config_key(section, key, value):
-    global hasmodified
-
-    config.set(section, key, value)
-    log("Modified config key; " + section + ", " + key)
-    hasmodified = True
-
-
-# Config stuff
-def set_config():
-    global settings_location, config, hasmodified, octoprint_plugin_name, system_version
-
-    if config.get("octoprint", "apikey") == "null":
-        log("OctoPrint API key is null, getting it from the config...")
-        get_octoprint_api_key()
-
-    if hasmodified:
-        log("Settings were modified. Updating settings.ini file...")
-
-        with open(settings_location, "w") as configfile:
-            config.write(configfile)
-
-        if str(config.get("info", "is_set_up")) == "True":
-            is_set_up = True
-        else:
-            is_set_up = False
-
-        printer_id = 0
-        if config.get("info", "printer_id") is not None:
-            try:
-                printer_id = int(config.get("info", "printer_id"))
-            except:
-                pass
-
-        # "Sync" data with the OctoPrint plugin - this is the way these scripts and the plugin communicate
-        post_data = {
-            "webcam": {
-                "webcamEnabled": True,
-                "timelapseEnabled": True,
-                "watermark": False
-            },
-            "plugins": {
-                octoprint_plugin_name: {
-                    "is_set_up": is_set_up,
-                    "request_url": update_url + "?id=" + get_rpid(),
-                    "rpi_id": str(get_rpid()),
-                    "printer_id": printer_id,
-                    "printer_name": str(config.get("info", "printer_name")),
-                    "simplyprint_version": str(system_version),
-                    "sp_local_installed": True,
-                    "temp_short_setup_id": str(config.get("info", "temp_short_setup_id"))
-                }
-            }
-        }
-        octoprint_api_req("settings", post_data)
-
 
 set_config()
 last_branding = None
