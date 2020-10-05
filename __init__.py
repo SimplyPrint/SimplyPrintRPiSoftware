@@ -174,7 +174,7 @@ required_sections = {
         "is_set_up": "False",
         "created": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
         "printer_id": "0",
-        "printer_name": "unset",
+        "printer_name": "",
         "requests_per_minute": "6",
         "last_connection_attempt": "0",
         "temp_short_setup_id": "",
@@ -187,7 +187,9 @@ required_sections = {
         "display_enabled": "True",
         "display_branding": "True",
         "display_show_status": "True",
-        "display_while_printing_type": "0"
+        "display_while_printing_type": "0",
+        "has_power_controller": "False",
+        "has_filament_sensor": "False"
     },
     "octoprint": {
         "apikey": "null"

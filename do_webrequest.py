@@ -231,34 +231,39 @@ def do_the_request():
                             # Check for safe mode (OctoPrint sometimes starts in safe mode on first boot...)
                             if not has_checked_safemode:
                                 has_checked_safemode = True
-                                safemode_check = octoprint_api_req("plugin/pluginmanager")
-                                if safemode_check is not None:
-                                    for plugin in safemode_check["plugins"]:
-                                        if plugin["safe_mode_victim"]:
-                                            # Don't end up in a restart loop...
-                                            safe_checks = config.getint("info", "safemode_check_next")
-                                            if safe_checks == 0:
-                                                # OctoPrint is in safe mode! Restart!
-                                                log("OctoPrint was in safe mode - probably not on purpose, restarting")
-                                                set_config_key("info", "safemode_check_next", "1")
-                                                set_config()
-                                                os.system("sudo service octoprint restart")
-                                            else:
-                                                # Has forced it out of safe mode once, but it's back :/
-                                                log("OctoPrint is STILL in safe mode!")
-
-                                                if safe_checks >= 10:
-                                                    # Has been in safe mode for 10 minutes - try getting it out again!
-                                                    log("Has been 10 minutes, trying to get OP out of safe mode")
-                                                    set_config_key("info", "safemode_check_next", "0")
+                                try:
+                                    # Don't crash for this...
+                                    safemode_check = octoprint_api_req("plugin/pluginmanager")
+                                    if safemode_check is not None:
+                                        for plugin in safemode_check["plugins"]:
+                                            if plugin["safe_mode_victim"]:
+                                                # Don't end up in a restart loop...
+                                                safe_checks = config.getint("info", "safemode_check_next")
+                                                if safe_checks == 0:
+                                                    # OctoPrint is in safe mode! Restart!
+                                                    log(
+                                                        "OctoPrint was in safe mode - probably not on purpose, restarting")
+                                                    set_config_key("info", "safemode_check_next", "1")
+                                                    set_config()
                                                     os.system("sudo service octoprint restart")
                                                 else:
-                                                    log("Still in safe mode...")
-                                                    new_checks = safe_checks + 1
-                                                    set_config_key("info", "safemode_check_next", str(new_checks))
+                                                    # Has forced it out of safe mode once, but it's back :/
+                                                    log("OctoPrint is STILL in safe mode!")
 
-                                                set_config()
-                                            break
+                                                    if safe_checks >= 10:
+                                                        # Has been in safe mode for 10 minutes - try getting it out again!
+                                                        log("Has been 10 minutes, trying to get OP out of safe mode")
+                                                        set_config_key("info", "safemode_check_next", "0")
+                                                        os.system("sudo service octoprint restart")
+                                                    else:
+                                                        log("Still in safe mode...")
+                                                        new_checks = safe_checks + 1
+                                                        set_config_key("info", "safemode_check_next", str(new_checks))
+
+                                                    set_config()
+                                                break
+                                except:
+                                    log("Failed to handle safe mode")
 
                             # If there's a newer version of SimplyPrint; download it right away
                             if check_has_update() == False:
@@ -276,9 +281,10 @@ def do_the_request():
                             set_config_key("info", "printer_id", str(the_json["printer_id"]))
 
                         the_printer_name = str(the_json["printer_name"]).strip()
-                        if config.get("info", "printer_name") != the_printer_name:
+                        old_name = config.get("info", "printer_name")
+                        if old_name != the_printer_name:
                             config_set = True
-                            log("Updating printer name to; " + str(the_printer_name))
+                            log("Updating printer name to; " + str(the_printer_name) + " (old was " + old_name + ")")
                             set_config_key("info", "printer_name", the_printer_name)
 
                         if config_set:
@@ -314,6 +320,22 @@ def do_the_request():
                                 if settings_array["display"]["show_status"]:
                                     is_enabled = "True"
                                 set_config_key("settings", "display_show_status", is_enabled)
+
+                            # Has power controller?
+                            if "has_power_controller" in settings_array:
+                                is_enabled = "False"
+                                if settings_array["has_power_controller"]:
+                                    is_enabled = "True"
+
+                                set_config_key("settings", "has_power_controller", is_enabled)
+
+                            # Has power controller?
+                            if "has_filament_sensor" in settings_array:
+                                is_enabled = "False"
+                                if settings_array["has_filament_sensor"]:
+                                    is_enabled = "True"
+
+                                set_config_key("settings", "has_filament_sensor", is_enabled)
 
                         set_config_key("info", "last_user_settings_sync", settings_array["updated_datetime"])
                         set_config()
