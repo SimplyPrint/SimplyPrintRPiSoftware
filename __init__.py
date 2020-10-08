@@ -28,7 +28,7 @@ import socket
 import sys
 import subprocess
 
-system_version = "2.1.1"
+system_version = "2.2.0"
 api_version = "0.0.3"
 
 
@@ -239,51 +239,11 @@ def get_octoprint_api_key():
 
 def has_internet():
     try:
-        # connect to the host -- tells us if the host is actually reachable
+        # connect to the host - tells us if the host is actually reachable
         socket.create_connection(("www.google.com", 80))
         return True
     except OSError:
         return False
-
-
-'''
-def ble_service_checkup():
-    is_set_up = config.getboolean("info", "is_set_up")
-    var = os.popen("ps ax | grep 'simplypi_ble_setup.py' | grep -v grep").read()
-    service_running = len(var) != 0
-    no_wifi = not has_internet()
-
-    if service_running and is_set_up and not no_wifi:
-        # BLE service is running while the system is set up - it should not
-        pid = int(os.popen("cat /tmp/simplypi_ble_service_pid").read())
-        log("Killing SimplyPrint BLE setup service with ID; " + str(pid))
-        try:
-            with open(os.devnull, "wb") as devnull:
-                subprocess.check_call(["sudo", "kill", "-9", str(pid)], stdout=devnull, stderr=subprocess.STDOUT)
-        except:
-            # Process doesn't exist (probably)
-            pass
-    elif (not service_running and not is_set_up) or no_wifi:
-        # BLE service NOT running, but it should
-        try:
-            bluetooth_is_up = os.system('systemctl is-active -quiet bluetooth')
-
-            if str(bluetooth_is_up) != "0":
-                log("Running SimplyPrint BLE setup service")
-                try:
-                    subprocess.Popen(["sudo python3 /home/pi/SimplyPrint/setup_ble/simplypi_ble_setup.py"], shell=True,
-                                     stdin=None, stdout=None, stderr=None, close_fds=True)
-                except:
-                    log("Failed to run BLE setup service")
-            else:
-                log("The Bluetooth service is not yet up (" + str(
-                    bluetooth_is_up) + ") - not starting the BLE setup service yet")
-        except:
-            log("Failed to check whether the Bluetooth service is up or not")
-
-
-ble_service_checkup()
-'''
 
 
 def octoprint_apikey():
@@ -483,9 +443,13 @@ def post_request(url, postobj, no_json=False, custom_header=None, return_respons
 
 
 def octoprint_api_req(api_file, post_data=None, no_json=False, custom_header=None, get_response_code=False,
-                      is_patch=False):
+                      is_patch=False, no_api_prefix=False):
     global config
-    the_url = "http://localhost/api/" + api_file + "?apikey=" + octoprint_apikey()
+
+    if not no_api_prefix:
+        the_url = "http://localhost/api/" + api_file + "?apikey=" + octoprint_apikey()
+    else:
+        the_url = "http://localhost/" + api_file + "?apikey=" + octoprint_apikey()
 
     if post_data is None:
         content = get_request(the_url, no_json, True, get_response_code, True)

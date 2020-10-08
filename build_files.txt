@@ -12,3 +12,4 @@ setup_ble/simplypi_ble_setup.py
 logs
 files
 uninstall.py
+octoprint_update_check.py

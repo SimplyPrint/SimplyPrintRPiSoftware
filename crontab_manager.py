@@ -24,10 +24,14 @@ import os
 
 the_comment = "[SimplyPrint v" + system_version + "]"
 the_startup_comment = "[SimplyPrint v" + system_version + " (startup file)]"
+the_oc_update_comment = "[SimplyPrint v" + system_version + " (OctoPrint update checker)]"
+
 command_file = os.path.dirname(os.path.abspath(__file__)) + "/do_webrequest.py"
 startup_command_file = os.path.dirname(os.path.abspath(__file__)) + "/startup.py"
+octoprint_update_file = os.path.dirname(os.path.abspath(__file__)) + "/octoprint_update_check.py"
 the_command = "sudo python3 " + command_file + "  # " + the_comment
 startup_command = "sudo python3 " + startup_command_file + "  # " + the_startup_comment
+octoprint_update_check = "sudo python3 " + octoprint_update_file + "  # " + the_oc_update_comment
 
 
 class CronManager:
@@ -35,17 +39,14 @@ class CronManager:
         self.cron = CronTab(user=True)
 
         for job in self.cron:
-            if "[simplyprint keep]" in job.comment.lower():
-                print("Keep job!")
-            else:
-                if the_comment.lower() not in job.comment.lower() and the_startup_comment.lower() not in job.comment.lower():
+            commentlowr = job.comment.lower()
+            if "[simplyprint" in commentlowr:
+                if commentlowr not in [the_comment.lower(), the_startup_comment.lower(), the_oc_update_comment.lower()]:
                     print("Remove job!")
                     self.cron.remove(job)
 
-    def add(self, user, command, on_reboot=False):
-        global the_comment
-
-        exist_check = self.cron.find_comment(the_comment)
+    def add(self, user, command, comment, on_reboot=False, once_a_day=False):
+        exist_check = self.cron.find_comment(comment)
         try:
             if is_py_3():
                 job = next(exist_check)
@@ -53,7 +54,7 @@ class CronManager:
                 job = exist_check.next()
 
             if len(job) > 0:
-                print("Cronjob for SimplyPrint Hub check already exists - not creating")
+                print("Cronjob for SimplyPrint check already exists - not creating")
                 return True
         except StopIteration:
             pass
@@ -65,14 +66,18 @@ class CronManager:
         if on_reboot:
             cron_job.every_reboot()
         else:
-            cron_job.minute.every(1)
+            if not once_a_day:
+                cron_job.minute.every(1)
+            else:
+                cron_job.hour.on(0)
+                cron_job.minute.on(0)
 
         cron_job.enable()
         self.cron.write()
-        # if self.cron.render():
         return True
 
 
 the_cron = CronManager()
-the_cron.add(True, the_command)
-the_cron.add(True, startup_command, True)
+the_cron.add(True, the_command, the_comment)
+the_cron.add(True, startup_command, the_startup_comment, True)
+the_cron.add(True, octoprint_update_check, the_oc_update_comment, False, True)

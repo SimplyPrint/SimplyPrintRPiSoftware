@@ -32,6 +32,8 @@ request_settings_next_time = False
 plugin_settings_awaiting = []
 last_awaiting_plugin_set = None
 has_checked_safemode = False
+has_checked_power_controller = False
+has_checked_filament_sensor = False
 
 
 def check_has_update():
@@ -125,7 +127,8 @@ def has_demand(demand, check_true=True):
 
 
 def do_the_request():
-    global times_a_minute, demand_list, request_settings_next_time, last_request_response_code, dir_path, last_awaiting_plugin_set, has_checked_safemode
+    global times_a_minute, demand_list, request_settings_next_time, has_checked_safemode, last_awaiting_plugin_set
+    global has_checked_power_controller, has_checked_filament_sensor, last_request_response_code, dir_path
 
     reset_api_cache()
     rpi_id = get_rpid()
@@ -139,6 +142,29 @@ def do_the_request():
             extra = "&request_settings"
             request_settings_next_time = False
 
+        # Check if should request POWER CONTROLLER
+        if config.getboolean("settings", "has_power_controller") and not has_checked_power_controller:
+            has_checked_power_controller = True
+            request = octoprint_api_req("plugin/simplypowercontroller", {"command": "getPSUState"})
+            if request is not None:
+                state = "off"
+                if request["isPSUOn"]:
+                    state = "on"
+
+                extra += "&power_controller=" + state
+
+        # Check if should request FILAMENT SENSOR
+        if config.getboolean("settings", "has_filament_sensor") and not has_checked_filament_sensor:
+            has_checked_filament_sensor = True
+            request = octoprint_api_req("plugin/simplyfilamentsensor", {"command": "getState"})
+            if request is not None:
+                state = "runout"
+                if request["has_filament"]:
+                    state = "loaded"
+
+                extra += "&filament_sensor=" + state
+
+        # Actual web request
         the_web_response = website_ping_update("&recv_commands" + extra)
 
     if the_web_response is not False and the_web_response is not None:
@@ -423,7 +449,7 @@ def do_the_request():
 
                                 # Install through pip, and restart OctoPrint
                                 os.system(
-                                    "yes | sudo /home/pi/oprint/bin/pip uninstall \"" + action["install_url"] + "\"")
+                                    "yes | sudo /home/pi/oprint/bin/pip uninstall \"" + action["pip_name"] + "\"")
 
                                 os.system(
                                     "yes | sudo -u pi /home/pi/oprint/bin/pip install \"" + action[
@@ -491,6 +517,7 @@ def do_the_request():
                         # No plugins to install or settings to set
                         process_pending_settings()
 
+                    # Update printer profile
                     if has_demand("set_printer_profile", False):
                         data = {"profile": demand_list["set_printer_profile"]}
 
@@ -624,12 +651,15 @@ def do_the_request():
                             log("[Take picture {" + picture_id + "}] failed; " + picture_err_msg)
                             get_request(upl_url + "&err_msg=" + picture_err_msg, True)
 
+                    # Check for updates
                     if check_has_update() == False:
                         return False
 
+                    # Check if should connect to printer
                     if has_demand("connect_printer"):
                         check_connect_printer()
 
+                    # Check if it should disconnect printer
                     if has_demand("disconnect_printer") and p_state != "Offline":
                         connect_printer(True)
 
