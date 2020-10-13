@@ -34,6 +34,7 @@ last_awaiting_plugin_set = None
 has_checked_safemode = False
 has_checked_power_controller = False
 has_checked_filament_sensor = False
+has_checked_webcam_options = False
 
 
 def check_has_update():
@@ -129,6 +130,7 @@ def has_demand(demand, check_true=True):
 def do_the_request():
     global times_a_minute, demand_list, request_settings_next_time, has_checked_safemode, last_awaiting_plugin_set
     global has_checked_power_controller, has_checked_filament_sensor, last_request_response_code, dir_path
+    global octoprint_settings, has_checked_webcam_options
 
     reset_api_cache()
     rpi_id = get_rpid()
@@ -164,6 +166,28 @@ def do_the_request():
 
                 extra += "&filament_sensor=" + state
 
+        # Sync webcam settings with server
+        if not has_checked_webcam_options:
+            has_checked_webcam_options = True
+            if octoprint_settings is not None and "webcam" in octoprint_settings:
+                s_cam = octoprint_settings["webcam"]
+                if "flipH" in s_cam and "flipV" in s_cam and "rotate90" in s_cam:
+                    change = False
+                    if s_cam["flipH"] != config.getboolean("webcam", "flipH"):
+                        change = True
+                    elif s_cam["flipV"] != config.getboolean("webcam", "flipV"):
+                        change = True
+                    elif s_cam["rotate90"] != config.getboolean("webcam", "rotate90"):
+                        change = True
+
+                    if change:
+                        # Webcam settings in OctoPrint is different from SimplyPrint ones
+                        extra += "&webcam_options=" + url_quote(json.dumps({
+                            "flipH": s_cam["flipH"],
+                            "flipV": s_cam["flipV"],
+                            "rotate90": s_cam["rotate90"],
+                        }))
+
         # Actual web request
         the_web_response = website_ping_update("&recv_commands" + extra)
 
@@ -188,12 +212,13 @@ def do_the_request():
             if not config.getboolean("info", "is_set_up"):
                 # RPI thinks it's not set up, but server does - sync
                 if the_json["printer_set_up"]:
-                    log("Set to 'is set up'!")
+                    log("Set to 'is set up'! (2)")
                     set_config_key("info", "is_set_up", "True")
 
                     # Run "startup" script to send IP, WiFi and such
                     try:
-                        subprocess.Popen(str("sudo " + py_prefix() + " /home/pi/SimplyPrint/startup.py"))
+                        p = str("sudo " + py_prefix() + " /home/pi/SimplyPrint/startup.py")
+                        os.system(p)
                     except:
                         log("Failed to start 'startup' script")
 
@@ -243,7 +268,7 @@ def do_the_request():
                         # log("Printer is not set up.")
                         if has_demand("printer_set_up"):
                             # Printer has now been set up! Out of setup mode we go
-                            log("Set to 'is set up'!")
+                            log("Set to 'is set up'! (1)")
                             set_config_key("info", "is_set_up", "True")
                             set_config_key("info", "safemode_check_next", "0")
                             set_config()
@@ -414,6 +439,60 @@ def do_the_request():
                         # Turn power controller OFF
                         octoprint_api_req("plugin/simplypowercontroller", {"command": "turnPSUOff"}, True)
 
+                    # Has updated webcam settings
+                    if has_demand("webcam_settings_updated", False):
+                        log("Got webcam settings update")
+
+                        new_s_cam = {
+                            "flipH": "False",
+                            "flipV": "False",
+                            "rotate90": "False",
+                        }
+
+                        try:
+                            test = json.loads(demand_list["webcam_settings_updated"])
+                            if "flipH" in test:
+                                if test["flipH"]:
+                                    new_s_cam["flipH"] = "True"
+                            if "flipV" in test:
+                                if test["flipV"]:
+                                    new_s_cam["flipV"] = "True"
+                            if "rotate90" in test:
+                                if test["rotate90"]:
+                                    new_s_cam["rotate90"] = "True"
+
+                            set_config_key("webcam", "flipH", new_s_cam["flipH"])
+                            set_config_key("webcam", "flipV", new_s_cam["flipV"])
+                            set_config_key("webcam", "rotate90", new_s_cam["rotate90"])
+                            set_config()
+
+                            if "sync" in test:
+                                # Sync these settings with OctoPrint
+                                to_post = {
+                                    "flipH": False,
+                                    "flipV": False,
+                                    "rotate90": False,
+                                }
+
+                                # This hurts... Thanks Python...
+                                if new_s_cam["flipH"] == "True":
+                                    to_post["flipH"] = True
+
+                                if new_s_cam["flipV"] == "True":
+                                    to_post["flipV"] = True
+
+                                if new_s_cam["rotate90"] == "True":
+                                    to_post["rotate90"] = True
+
+                                check = octoprint_api_req("settings", {"webcam": to_post}, True, None, True)
+                                if check:
+                                    log("Synced webcam settings!")
+                                else:
+                                    log("Failed to sync webcam settings...")
+                        except:
+                            log("Failed to update or parse new webcam settings")
+
+                    # Plugin actions - install, uninstall, set settings etc.
                     if has_demand("octoprint_plugin_action", False):
                         installed_plugins = []
                         plugins_txt = os.path.join(dir_path, "sp_installed_plugins.txt")

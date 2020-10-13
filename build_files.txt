@@ -4,11 +4,6 @@ do_webrequest.py
 get_ip.sh
 startup.py
 LICENSE
-setup_ble
-setup_ble/advertisement.py
-setup_ble/bletools.py
-setup_ble/service.py
-setup_ble/simplypi_ble_setup.py
 logs
 files
 uninstall.py

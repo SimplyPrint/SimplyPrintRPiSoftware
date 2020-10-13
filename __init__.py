@@ -28,7 +28,7 @@ import socket
 import sys
 import subprocess
 
-system_version = "2.2.0"
+system_version = "2.2.1"
 api_version = "0.0.3"
 
 
@@ -193,6 +193,11 @@ required_sections = {
     },
     "octoprint": {
         "apikey": "null"
+    },
+    "webcam": {
+        "flipH": "False",
+        "flipV": "False",
+        "rotate90": "False",
     }
 }
 
@@ -592,7 +597,7 @@ def website_ping_update(extra_parameters=None):
         # Make sure printer is connected when it's expecting setup
         check_connect_printer()
 
-        the_url = base_url + "&new=true&printer_tmp_state=" + p_state
+        the_url = base_url + "&new=true&printer_tmp_state=" + p_state + "&custom_sys_version=" + str(system_version)
         # log("Requesting; " + str(the_url))
         return get_request(the_url, True)
     else:
@@ -640,7 +645,8 @@ def website_ping_update(extra_parameters=None):
 
             # Run "startup" script to send IP, WiFi and such
             try:
-                subprocess.Popen(str("sudo " + py_prefix() + " /home/pi/SimplyPrint/startup.py").split())
+                p = str("sudo " + py_prefix() + " /home/pi/SimplyPrint/startup.py")
+                os.system(p)
             except:
                 log("Failed to open 'startup' script")
 
