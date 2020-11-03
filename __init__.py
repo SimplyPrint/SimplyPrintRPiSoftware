@@ -92,7 +92,7 @@ def current_job_completion():
 
 
 octoprint_plugin_name = "SimplyPrint"
-request_url = "https://simplyprint.dk/"
+request_url = "https://simplyprint.io/"
 update_url = request_url + "api/do_update.php"
 
 # ~ Debugging & logging
@@ -198,7 +198,11 @@ required_sections = {
         "flipH": "False",
         "flipV": "False",
         "rotate90": "False",
-    }
+    },
+    # "gcode_terminal": {
+    #    "active": "False",
+    #    "suppress_temp": "True"
+    # }
 }
 
 
@@ -308,7 +312,11 @@ def set_config():
                     "printer_name": str(config.get("info", "printer_name")),
                     "simplyprint_version": str(system_version),
                     "sp_local_installed": True,
-                    "temp_short_setup_id": str(config.get("info", "temp_short_setup_id"))
+                    "temp_short_setup_id": str(config.get("info", "temp_short_setup_id")),
+                    # "gcode_terminal": {
+                    #    "active": config.getboolean("gcode_terminal", "active"),
+                    #    "suppress_temp": config.getboolean("gcode_terminal", "suppress_temp"),
+                    # }
                 }
             }
         }
@@ -611,12 +619,26 @@ def website_ping_update(extra_parameters=None):
         if printer_info is not None:
             if "temperature" in printer_info:
                 if "bed" in printer_info["temperature"]:
-                    to_set["bed_temp"] = round(printer_info["temperature"]["bed"]["actual"])
-                    to_set["target_bed_temp"] = round(printer_info["temperature"]["bed"]["target"])
+                    if printer_info["temperature"]["bed"]["actual"] is not None:
+                        to_set["bed_temp"] = round(printer_info["temperature"]["bed"]["actual"])
+                    else:
+                        to_set["bed_temp"] = 0
+
+                    if printer_info["temperature"]["bed"]["target"] is not None:
+                        to_set["target_bed_temp"] = round(printer_info["temperature"]["bed"]["target"])
+                    else:
+                        to_set["target_bed_temp"] = 0
 
                 if "tool0" in printer_info["temperature"]:
-                    to_set["tool_temp"] = round(printer_info["temperature"]["tool0"]["actual"])
-                    to_set["target_tool_temp"] = round(printer_info["temperature"]["tool0"]["target"])
+                    if printer_info["temperature"]["tool0"]["actual"] is not None:
+                        to_set["tool_temp"] = round(printer_info["temperature"]["tool0"]["actual"])
+                    else:
+                        to_set["tool_temp"] = 0
+
+                    if printer_info["temperature"]["tool0"]["target"] is not None:
+                        to_set["target_tool_temp"] = round(printer_info["temperature"]["tool0"]["target"])
+                    else:
+                        to_set["target_tool_temp"] = 0
 
             if p_state == "Printing" or p_state == "Cancelling" or p_state == "Pausing" or p_state == "Paused":
                 print_job = get_print_job()
@@ -836,6 +858,31 @@ def sync_settings_with_plugin():
                             "\nLocal; " + str(the_check) + ", plugin; " + str(the_data["simplyprint_version"]))
 
                         hasmodified = True
+
+                    # GCODE terminal stuff
+                    '''the_check = config.getboolean("gcode_terminal", "active")
+                    if "gcode_terminal" in the_data:
+                        printer_name = the_data["gcode_terminal"]["active"]
+                    else:
+                        printer_name = None
+
+                    if printer_name != the_check:
+                        log("Plugin setting 'gcode_terminal; active' is not the same as local config"
+                            "\nLocal; " + str(the_check) + ", plugin; " + str(printer_name))
+
+                        hasmodified = True
+
+                    the_check = config.getboolean("gcode_terminal", "suppress_temp")
+                    if "gcode_terminal" in the_data:
+                        printer_name = the_data["gcode_terminal"]["suppress_temp"]
+                    else:
+                        printer_name = None
+
+                    if printer_name != the_check:
+                        log("Plugin setting 'gcode_terminal; suppress_temp' is not the same as local config"
+                            "\nLocal; " + str(the_check) + ", plugin; " + str(printer_name))
+
+                        hasmodified = True'''
                 else:
                     log("OctoPrint plugin is not installed (or just disabled)", "error")
             else:

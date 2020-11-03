@@ -24,13 +24,16 @@ import os
 
 the_comment = "[SimplyPrint v" + system_version + "]"
 the_startup_comment = "[SimplyPrint v" + system_version + " (startup file)]"
+the_startup_comment_2 = "[SimplyPrint v" + system_version + " (startup requests)]"
 the_oc_update_comment = "[SimplyPrint v" + system_version + " (OctoPrint update checker)]"
 
 command_file = os.path.dirname(os.path.abspath(__file__)) + "/do_webrequest.py"
 startup_command_file = os.path.dirname(os.path.abspath(__file__)) + "/startup.py"
+startup_command_file_2 = os.path.dirname(os.path.abspath(__file__)) + "/initial_webrequests.py"
 octoprint_update_file = os.path.dirname(os.path.abspath(__file__)) + "/octoprint_update_check.py"
 the_command = "sudo python3 " + command_file + "  # " + the_comment
 startup_command = "sudo python3 " + startup_command_file + "  # " + the_startup_comment
+startup_command_2 = "sudo python3 " + startup_command_file_2 + "  # " + the_startup_comment_2
 octoprint_update_check = "sudo python3 " + octoprint_update_file + "  # " + the_oc_update_comment
 
 
@@ -80,4 +83,5 @@ class CronManager:
 the_cron = CronManager()
 the_cron.add(True, the_command, the_comment)
 the_cron.add(True, startup_command, the_startup_comment, True)
+the_cron.add(True, startup_command_2, the_startup_comment_2, True)
 the_cron.add(True, octoprint_update_check, the_oc_update_comment, False, True)

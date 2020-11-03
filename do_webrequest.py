@@ -22,6 +22,7 @@ from __init__ import *
 import time
 import subprocess
 import sys
+from datetime import datetime
 
 start_time = time.time()
 times_a_minute = config.getint("info", "requests_per_minute")
@@ -214,6 +215,7 @@ def do_the_request():
                 if the_json["printer_set_up"]:
                     log("Set to 'is set up'! (2)")
                     set_config_key("info", "is_set_up", "True")
+                    set_config_key("info", "temp_short_setup_id", "")
 
                     # Run "startup" script to send IP, WiFi and such
                     try:
@@ -270,6 +272,7 @@ def do_the_request():
                             # Printer has now been set up! Out of setup mode we go
                             log("Set to 'is set up'! (1)")
                             set_config_key("info", "is_set_up", "True")
+                            set_config_key("info", "temp_short_setup_id", "")
                             set_config_key("info", "safemode_check_next", "0")
                             set_config()
                             set_display("Set up!", True)
@@ -728,7 +731,7 @@ def do_the_request():
 
                         if picture_err_msg != "":
                             log("[Take picture {" + picture_id + "}] failed; " + picture_err_msg)
-                            get_request(upl_url + "&err_msg=" + picture_err_msg, True)
+                            get_request(upl_url + "&err_msg=" + picture_err_msg, False)
 
                     # Check for updates
                     if check_has_update() == False:
@@ -811,10 +814,20 @@ i = 0  # Skip the last one - cron handles the last by doing it again, so cut it 
 total_requests = 0
 successful_requests = 0
 failed_requests = 0
+
+dateTimeObj = datetime.now()
+timestampStr = dateTimeObj.strftime("%S")
+seconds_to_run = 60 - int(timestampStr)
+
+if seconds_to_run > 58:
+    seconds_to_run = 58
+
+print("Gonna run for " + str(seconds_to_run) + "s")
+
 while i < times_a_minute:
     print("Request...")
 
-    if time.time() - start_time < 58:  # Don't continue for more than a minute - a new cron job will take over
+    if time.time() - start_time < seconds_to_run:  # Don't continue for more than a minute - a new cron job will take over
         the_request = do_the_request()
         total_requests += 1
 
