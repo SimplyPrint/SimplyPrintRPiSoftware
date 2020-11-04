@@ -28,7 +28,7 @@ import socket
 import sys
 import subprocess
 
-system_version = "2.2.1"
+system_version = "2.3.0"
 api_version = "0.0.3"
 
 
