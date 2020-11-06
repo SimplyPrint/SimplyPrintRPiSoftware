@@ -36,6 +36,7 @@ has_checked_safemode = False
 has_checked_power_controller = False
 has_checked_filament_sensor = False
 has_checked_webcam_options = False
+has_checked_firmware_info = False
 
 
 def check_has_update():
@@ -131,7 +132,7 @@ def has_demand(demand, check_true=True):
 def do_the_request():
     global times_a_minute, demand_list, request_settings_next_time, has_checked_safemode, last_awaiting_plugin_set
     global has_checked_power_controller, has_checked_filament_sensor, last_request_response_code, dir_path
-    global octoprint_settings, has_checked_webcam_options
+    global octoprint_settings, has_checked_webcam_options, has_checked_firmware_info
 
     reset_api_cache()
     rpi_id = get_rpid()
@@ -145,49 +146,50 @@ def do_the_request():
             extra = "&request_settings"
             request_settings_next_time = False
 
-        # Check if should request POWER CONTROLLER
-        if config.getboolean("settings", "has_power_controller") and not has_checked_power_controller:
-            has_checked_power_controller = True
-            request = octoprint_api_req("plugin/simplypowercontroller", {"command": "getPSUState"})
-            if request is not None:
-                state = "off"
-                if request["isPSUOn"]:
-                    state = "on"
+        if config.getboolean("info", "is_set_up"):
+            # Check if should request POWER CONTROLLER
+            if config.getboolean("settings", "has_power_controller") and not has_checked_power_controller:
+                has_checked_power_controller = True
+                request = octoprint_api_req("plugin/simplypowercontroller", {"command": "getPSUState"})
+                if request is not None:
+                    state = "off"
+                    if request["isPSUOn"]:
+                        state = "on"
 
-                extra += "&power_controller=" + state
+                    extra += "&power_controller=" + state
 
-        # Check if should request FILAMENT SENSOR
-        if config.getboolean("settings", "has_filament_sensor") and not has_checked_filament_sensor:
-            has_checked_filament_sensor = True
-            request = octoprint_api_req("plugin/simplyfilamentsensor", {"command": "getState"})
-            if request is not None:
-                state = "runout"
-                if request["has_filament"]:
-                    state = "loaded"
+            # Check if should request FILAMENT SENSOR
+            if config.getboolean("settings", "has_filament_sensor") and not has_checked_filament_sensor:
+                has_checked_filament_sensor = True
+                request = octoprint_api_req("plugin/simplyfilamentsensor", {"command": "getState"})
+                if request is not None:
+                    state = "runout"
+                    if request["has_filament"]:
+                        state = "loaded"
 
-                extra += "&filament_sensor=" + state
+                    extra += "&filament_sensor=" + state
 
-        # Sync webcam settings with server
-        if not has_checked_webcam_options:
-            has_checked_webcam_options = True
-            if octoprint_settings is not None and "webcam" in octoprint_settings:
-                s_cam = octoprint_settings["webcam"]
-                if "flipH" in s_cam and "flipV" in s_cam and "rotate90" in s_cam:
-                    change = False
-                    if s_cam["flipH"] != config.getboolean("webcam", "flipH"):
-                        change = True
-                    elif s_cam["flipV"] != config.getboolean("webcam", "flipV"):
-                        change = True
-                    elif s_cam["rotate90"] != config.getboolean("webcam", "rotate90"):
-                        change = True
+            # Sync webcam settings with server
+            if not has_checked_webcam_options:
+                has_checked_webcam_options = True
+                if octoprint_settings is not None and "webcam" in octoprint_settings:
+                    s_cam = octoprint_settings["webcam"]
+                    if "flipH" in s_cam and "flipV" in s_cam and "rotate90" in s_cam:
+                        change = False
+                        if s_cam["flipH"] != config.getboolean("webcam", "flipH"):
+                            change = True
+                        elif s_cam["flipV"] != config.getboolean("webcam", "flipV"):
+                            change = True
+                        elif s_cam["rotate90"] != config.getboolean("webcam", "rotate90"):
+                            change = True
 
-                    if change:
-                        # Webcam settings in OctoPrint is different from SimplyPrint ones
-                        extra += "&webcam_options=" + url_quote(json.dumps({
-                            "flipH": s_cam["flipH"],
-                            "flipV": s_cam["flipV"],
-                            "rotate90": s_cam["rotate90"],
-                        }))
+                        if change:
+                            # Webcam settings in OctoPrint is different from SimplyPrint ones
+                            extra += "&webcam_options=" + url_quote(json.dumps({
+                                "flipH": s_cam["flipH"],
+                                "flipV": s_cam["flipV"],
+                                "rotate90": s_cam["rotate90"],
+                            }))
 
         # Actual web request
         the_web_response = website_ping_update("&recv_commands" + extra)
@@ -322,6 +324,15 @@ def do_the_request():
                             # If there's a newer version of SimplyPrint; download it right away
                             if check_has_update() == False:
                                 return False
+
+                            # Check for missing firmware info (and the important; warnings)
+                            if has_demand("missing_firmware_info"):
+                                if not has_checked_firmware_info:
+                                    has_checked_firmware_info = True
+                                    # Disconnect and wait for firmware data
+                                    connect_printer(True)
+                                else:
+                                    connect_printer()
 
                             set_display(the_json["printer_set_up_short_id"])
 
