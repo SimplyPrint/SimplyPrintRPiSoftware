@@ -33,6 +33,7 @@ pi_model = ""
 octoprint_version = ""
 octoprint_api_version = ""
 python_version = ""
+has_camera = "0"
 
 
 # Get WiFi SSID
@@ -92,27 +93,14 @@ def get_octoprint_details():
             octoprint_api_version = oc_version_info["api"]
 
 
-'''
-camera_support = "0"
-# Not relevant for OctoPrint
-camera_check = subprocess.check_output(["vcgencmd", "get_camera"])
-
-if camera_check.find("supported=1") != -1:
-    camera_support = "1"
-
-if camera_check.find("detected=1") != -1:
-    has_camera = "1"
-'''
-
-
 def set_octoprint_settings():
-    global hasmodified
+    global hasmodified, has_camera, octoprint_settings
 
     if octoprint_settings is not None:
         try:
             if octoprint_settings["webcam"]["webcamEnabled"]:
                 the_url = octoprint_settings["webcam"]["snapshotUrl"]
-                request_check = requests.get(the_url, allow_redirects=True, verify=False)
+                request_check = requests.get(the_url, allow_redirects=True, verify=False, timeout=5)
 
                 if request_check.status_code == 200:
                     has_camera = "1"
@@ -158,6 +146,17 @@ if pi_model == "":
 
 # Often times not connected to the internet yet - give it a little time
 # time.sleep(15)
+
+octoprint_is_up = False
+while not octoprint_is_up:
+    if octoprint_settings is not None:
+        print("OctoPrint is up!")
+        octoprint_is_up = True
+    else:
+        # Let's wait and try again
+        print("OctoPrint is down - waiting until it's up to send startup request")
+        time.sleep(5)
+        octoprint_settings = octoprint_api_req("settings")
 
 # Send update to server
 has_notified_server = False

@@ -28,7 +28,7 @@ import socket
 import sys
 import subprocess
 
-system_version = "2.3.0"
+system_version = "2.3.2"
 api_version = "0.0.3"
 
 
@@ -321,6 +321,15 @@ def set_config():
             }
         }
         octoprint_api_req("settings", post_data)
+
+
+def sub_start_script(script):
+    try:
+        subprocess.Popen(["sudo", py_prefix(), script],
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.STDOUT)
+    except:
+        log("Failed to run script; " + script)
 
 
 def get_request(url, no_json=False, is_api_request=False, get_response_code=False, is_octoprint_request=False):
@@ -723,9 +732,12 @@ def upload_file(file_to_upload, dest_filename):
     return [the_status, response]
 
 
-def process_file_request(download_url):
+def process_file_request(download_url, file_new_name=None):
+    if file_new_name is None:
+        file_new_name = str(uuid.uuid1())
+
     the_filename, file_extension = os.path.splitext(download_url)
-    new_filename = "sp_" + str(uuid.uuid1()) + ".gcode"
+    new_filename = "sp_" + file_new_name + ".gcode"
     new_file_dest = os.path.join(temp_files_path, new_filename)
     free_space = octoprint_api_req("files/local")["free"]
 
@@ -781,6 +793,70 @@ def process_file_request(download_url):
 
     log(" - [ERROR] " + return_msg)
     return [False, return_msg, new_filename]
+
+
+def get_post_image(picture_id=None, do_log=True):
+    if do_log:
+        log("Should take picture!")
+    was_none = ""
+    json_return = None
+
+    if picture_id is None:
+        picture_id = str(uuid.uuid1())
+        upl_url = request_url + "api/receive_snapshot.php?livestream=" + get_rpid()
+    else:
+        upl_url = request_url + "api/receive_snapshot.php?request_id=" + picture_id
+
+    if octoprint_settings is not None:
+        try:
+            if octoprint_settings["webcam"]["webcamEnabled"]:
+                the_url = octoprint_settings["webcam"]["snapshotUrl"]
+                new_name = str(picture_id) + ".png"
+
+                if do_log:
+                    log("Taking picture...")
+                the_download = download_file(the_url, new_name)
+                if the_download[0]:
+                    with open(new_name, "rb") as f:
+                        if do_log:
+                            log("Uploading picture...")
+                        r = requests.post(upl_url, files={"the_file": f})
+                        json_return = r.json()
+
+                        if json_return is not None:
+                            if json_return["status"]:
+                                if do_log:
+                                    log("Picture taken and uploaded successfully!")
+                            else:
+                                if do_log:
+                                    log("Failed to upload picture; " + str(r.content))
+                        else:
+                            log("Request failed; " + str(r.content))
+
+                    try:
+                        os.remove(new_name)
+                        if do_log:
+                            log("Deleted picture locally")
+                    except:
+                        if do_log:
+                            log("Failed to delete picture locally")
+
+                    return json_return
+                else:
+                    picture_err_msg = "Download of screenshot wasn't successful; " + the_download[1]
+            else:
+                picture_err_msg = ""
+        except Exception as e:
+            picture_err_msg = "Failed to take picture or upload it; " + str(e)
+    else:
+        picture_err_msg = "Could not get the OctoPrint settings and therefore not the snapshot URL"
+
+    if picture_err_msg != "":
+        if do_log:
+            log("[Take picture {" + picture_id + "}] failed; " + picture_err_msg)
+        get_request(upl_url + "&err_msg=" + picture_err_msg, False)
+
+    return False
 
 
 if config.has_section("info"):

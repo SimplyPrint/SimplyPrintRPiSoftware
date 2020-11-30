@@ -129,7 +129,7 @@ def has_demand(demand, check_true=True):
     return False
 
 
-def do_the_request():
+def do_the_request(num):
     global times_a_minute, demand_list, request_settings_next_time, has_checked_safemode, last_awaiting_plugin_set
     global has_checked_power_controller, has_checked_filament_sensor, last_request_response_code, dir_path
     global octoprint_settings, has_checked_webcam_options, has_checked_firmware_info
@@ -147,6 +147,9 @@ def do_the_request():
             request_settings_next_time = False
 
         if config.getboolean("info", "is_set_up"):
+            if num == 0:
+                extra += "&first"
+
             # Check if should request POWER CONTROLLER
             if config.getboolean("settings", "has_power_controller") and not has_checked_power_controller:
                 has_checked_power_controller = True
@@ -220,11 +223,7 @@ def do_the_request():
                     set_config_key("info", "temp_short_setup_id", "")
 
                     # Run "startup" script to send IP, WiFi and such
-                    try:
-                        p = str("sudo " + py_prefix() + " /home/pi/SimplyPrint/startup.py")
-                        os.system(p)
-                    except:
-                        log("Failed to start 'startup' script")
+                    sub_start_script("/home/pi/SimplyPrint/startup.py")
 
                     set_config()
                     return True
@@ -261,7 +260,7 @@ def do_the_request():
 
                 # Server is missing details from "startup.py"
                 if has_demand("missing_info"):
-                    os.system("sudo " + py_prefix() + " /home/pi/SimplyPrint/startup.py")
+                    sub_start_script("/home/pi/SimplyPrint/startup.py")
 
                 # Check setup state
                 if not config.getboolean("info", "is_set_up"):
@@ -425,11 +424,13 @@ def do_the_request():
 
                     if has_demand("system_reboot"):
                         set_display("Rebooting...", True)
-                        os.system("sudo shutdown -r now")
+                        os.system("sudo reboot")
+                        return True
 
                     if has_demand("system_shutdown"):
                         set_display("Shutting down", True)
                         os.system("sudo shutdown -h now")
+                        return True
 
                     if has_demand("start_octoprint"):
                         os.system("sudo service octoprint start")
@@ -699,50 +700,11 @@ def do_the_request():
 
                     # Take picture - camera stuff
                     if has_demand("take_picture"):
-                        log("Should take picture!")
+                        get_post_image(demand_list["picture_job_id"])
 
-                        picture_err_msg = ""
-                        picture_id = demand_list["picture_job_id"]
-                        upl_url = request_url + "api/receive_snapshot.php?request_id=" + picture_id
-
-                        if octoprint_settings is not None:
-                            try:
-                                if octoprint_settings["webcam"]["webcamEnabled"]:
-                                    the_url = octoprint_settings["webcam"]["snapshotUrl"]
-                                    new_name = str(picture_id) + ".png"
-
-                                    log("Taking picture...")
-                                    the_download = download_file(the_url, new_name)
-                                    if the_download[0]:
-                                        with open(new_name, "rb") as f:
-                                            log("Uploading picture...")
-                                            r = requests.post(upl_url, files={"the_file": f})
-                                            json_return = r.json()
-
-                                            if json_return is not None:
-                                                if json_return["status"]:
-                                                    log("Picture taken and uploaded successfully!")
-                                                else:
-                                                    log("Failed to upload picture; " + str(r.content))
-                                            else:
-                                                log("Request failed; " + str(r.content))
-
-                                        if os.path.isfile(new_name):
-                                            os.remove(new_name)
-                                            log("Deleted picture locally")
-
-                                    else:
-                                        picture_err_msg = "Download of screenshot wasn't successful; " + the_download[1]
-                                else:
-                                    picture_err_msg = ""
-                            except Exception as e:
-                                picture_err_msg = "Failed to take picture or upload it; " + str(e)
-                        else:
-                            picture_err_msg = "Could not get the OctoPrint settings and therefore not the snapshot URL"
-
-                        if picture_err_msg != "":
-                            log("[Take picture {" + picture_id + "}] failed; " + picture_err_msg)
-                            get_request(upl_url + "&err_msg=" + picture_err_msg, False)
+                    if has_demand("livestream"):
+                        print("\n\nStart livestream!\n\n")
+                        sub_start_script("/home/pi/SimplyPrint/image_stream.py")
 
                     # Check for updates
                     if check_has_update() == False:
@@ -782,7 +744,6 @@ def do_the_request():
                     # START PRINTING (or process file first, but still!)
                     if has_demand("process_file"):
                         # Start a print (job)!
-
                         return_message = ""
                         file_name = ""
 
@@ -790,7 +751,12 @@ def do_the_request():
                             set_display("Preparing...", True)
 
                             the_download_url = demand_list["print_file"]
-                            file_status = process_file_request(the_download_url)
+                            if has_demand("file_name", False):
+                                new_name = demand_list["file_name"]
+                            else:
+                                new_name = None
+
+                            file_status = process_file_request(the_download_url, new_name)
                             file_name = file_status[2]
                             if not file_status[0]:
                                 return_message = file_status[1]
@@ -834,12 +800,13 @@ if seconds_to_run > 58:
     seconds_to_run = 58
 
 print("Gonna run for " + str(seconds_to_run) + "s")
+print(str(times_a_minute) + " times a minute")
 
 while i < times_a_minute:
     print("Request...")
 
     if time.time() - start_time < seconds_to_run:  # Don't continue for more than a minute - a new cron job will take over
-        the_request = do_the_request()
+        the_request = do_the_request(i)
         total_requests += 1
 
         if the_request:
