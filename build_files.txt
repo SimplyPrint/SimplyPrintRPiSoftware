@@ -9,3 +9,4 @@ files
 uninstall.py
 octoprint_update_check.py
 initial_webrequests.py
+image_stream.py
