@@ -33,7 +33,7 @@ import subprocess
 import argparse
 import io
 
-system_version = "2.4.6"  # This MUST MATCH the version specified in setup.py
+system_version = "2.4.9"  # This MUST MATCH the version specified in setup.py
 api_version = "0.0.3"
 
 IS_PY3 = sys.version_info.major == 3
@@ -80,6 +80,7 @@ is_serial_connecting = False
 octoprint_settings = None
 http = None
 last_request_response_code = None
+op_down_check = 0
 
 if not os.path.exists(temp_files_path):
     os.makedirs(temp_files_path)
@@ -286,8 +287,12 @@ def set_config():
     if hasmodified:
         log("Settings were modified. Updating settings.ini file...")
 
-        with io.open(settings_location, "w") as configfile:
-            config.write(configfile)
+        if IS_PY3:
+            with io.open(settings_location, "w", encoding="utf-8") as configfile:
+                config.write(configfile)
+        else:
+            with open(settings_location, "w") as configfile:
+                config.write(configfile)
 
         if str(config.get("info", "is_set_up")) == "True":
             is_set_up = True
@@ -338,7 +343,7 @@ def sub_start_script(script):
 
 
 def get_request(url, no_json=False, is_api_request=False, get_response_code=False, is_octoprint_request=False):
-    global http, last_request_response_code
+    global http, last_request_response_code, op_down_check
 
     url = url.replace(" ", "%20")
     response_code = None
@@ -386,19 +391,25 @@ def get_request(url, no_json=False, is_api_request=False, get_response_code=Fals
             get_octoprint_api_key()
             website_ping_update("&octoprint_api_key=" + octoprint_apikey())
 
+        down_to_set = ""
+
         if "503" in str(e) and is_api_request:
             if not config.getboolean("info", "octoprint_down"):
+                op_down_check = 0
                 down_to_set = "True"
                 log("OctoPrint is down (503: Service Unavailable) - waiting to make sure it's really down, "
                     "then restarting")
                 website_ping_update("&octoprint_status=Shutdown")
             else:
-                down_to_set = "False"
-                log("OctoPrint is STILL down - restarting the OctoPrint service")
-                os.system("sudo service octoprint restart")
+                op_down_check += 1
+                if op_down_check > 6:
+                    down_to_set = "False"
+                    log("OctoPrint is STILL down - restarting the OctoPrint service")
+                    os.system("sudo service octoprint restart")
 
-            set_config_key("info", "octoprint_down", down_to_set)
-            set_config()
+            if down_to_set != "":
+                set_config_key("info", "octoprint_down", down_to_set)
+                set_config()
 
         return False
 
@@ -1009,5 +1020,9 @@ def webrequest_pid(make_new=True):
                 pass
 
     if make_new:
-        with io.open(webrequest_pid_file, "wt", encoding="utf-8") as file:
-            file.write(str(os.getpid()))
+        if IS_PY3:
+            with io.open(webrequest_pid_file, "wt", encoding="utf-8") as file:
+                file.write(str(os.getpid()))
+        else:
+            with open(webrequest_pid_file, "wt") as file:
+                file.write(str(os.getpid()))

@@ -16,9 +16,9 @@ with io.open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="SimplyPrintRPiSoftware",
-    version="2.4.6",  # This MUST match the version in base.py
+    version="2.4.9",  # This MUST match the version in base.py
     author="SimplyPrint",
-    author_email="albert@simplyprint.io",  # TODO
+    author_email="albert@simplyprint.io",
     description="The SimplyPrint software used to communicate with the platform",
     long_description=long_description,
     long_description_content_type="text/markdown",

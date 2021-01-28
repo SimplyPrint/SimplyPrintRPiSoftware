@@ -23,11 +23,12 @@ import os
 import signal
 import time
 import io
+import sys
 
 from .base import get_post_image
 
 dir_path = os.path.join(os.path.expanduser("~"), "simplyprint")
-
+IS_PY3 = sys.version_info.major == 3
 
 def run_stream():
     # Make sure only one instance is running
@@ -40,8 +41,12 @@ def run_stream():
             except:
                 pass
 
-    with io.open(stream_pid_file, "wt", encoding="utf-8") as file:
-        file.write(str(os.getpid()))
+    if IS_PY3:
+        with io.open(stream_pid_file, "wt", encoding="utf-8") as file:
+            file.write(str(os.getpid()))
+    else:
+        with open(stream_pid_file, "wt") as file:
+            file.write(str(os.getpid()))
 
     fails = 0
     do_livestream = True
