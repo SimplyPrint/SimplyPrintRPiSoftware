@@ -1,20 +1,23 @@
-"""
-SimplyPrint
-Copyright (C) 2020  SimplyPrint ApS
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import, division, unicode_literals
+#
+# SimplyPrint
+# Copyright (C) 2020-2021  SimplyPrint ApS
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""
 
 import yaml
 import uuid
@@ -27,23 +30,15 @@ import time
 import socket
 import sys
 import subprocess
+import argparse
+import io
 
-system_version = "2.3.2"
+system_version = "2.4.6"  # This MUST MATCH the version specified in setup.py
 api_version = "0.0.3"
 
+IS_PY3 = sys.version_info.major == 3
 
-def is_py_3():
-    return sys.version_info > (3, 0)
-
-
-def py_prefix():
-    if is_py_3():
-        return "python3"
-    else:
-        return "python"
-
-
-if is_py_3():
+if IS_PY3:
     # Python 3
     import configparser
     import urllib3
@@ -59,16 +54,26 @@ else:
 
 
 def url_quote(thestring):
-    if is_py_3():
+    if IS_PY3:
         return urllib.parse.quote(thestring)
     else:
         return urllib2.quote(thestring)
 
 
-# ~ Variables
-dir_path = os.path.dirname(os.path.realpath(__file__))
+# Paths for things
+# Structure:
+# ~/simplyprint
+#  - settings.ini
+#  - simplyprint_rpi_id.txt
+#  - logs/*
+#  - files/*
+dir_path = os.path.join(os.path.expanduser("~"), "simplyprint")
+if not os.path.exists(dir_path):
+    os.makedirs(dir_path)
 settings_location = os.path.join(dir_path, "settings.ini")
 temp_files_path = os.path.join(dir_path, "files")
+
+# ~ Variables
 __global_print_job__ = None
 __global_printer__ = None
 is_serial_connecting = False
@@ -132,13 +137,13 @@ def log(comment, log_type="debug"):
         logging.critical(comment)
 
 
-rpi_id_loc = "/home/pi/simplyprint_rpi_id.txt"
+rpi_id_loc = os.path.join(dir_path, "simplyprint_rpi_id.txt")
 
 
 def set_rpi_id(new_id):
     global rpi_id_loc
 
-    with open(rpi_id_loc, "w") as thefile:
+    with io.open(rpi_id_loc, "w") as thefile:
         thefile.write(new_id)
 
 
@@ -229,7 +234,7 @@ def get_octoprint_api_key():
     global hasmodified, config
 
     try:
-        with open("/home/pi/.octoprint/config.yaml", 'r') as stream:
+        with io.open("/home/pi/.octoprint/config.yaml", 'r') as stream:
             try:
                 the_config = yaml.safe_load(stream)
                 the_key = the_config["api"]["key"]
@@ -281,7 +286,7 @@ def set_config():
     if hasmodified:
         log("Settings were modified. Updating settings.ini file...")
 
-        with open(settings_location, "w") as configfile:
+        with io.open(settings_location, "w") as configfile:
             config.write(configfile)
 
         if str(config.get("info", "is_set_up")) == "True":
@@ -325,7 +330,7 @@ def set_config():
 
 def sub_start_script(script):
     try:
-        subprocess.Popen(["sudo", py_prefix(), script],
+        subprocess.Popen([sys.executable, "-m", "simplyprint_raspberry", script],
                          stdout=subprocess.PIPE,
                          stderr=subprocess.STDOUT)
     except:
@@ -349,7 +354,7 @@ def get_request(url, no_json=False, is_api_request=False, get_response_code=Fals
     }
 
     try:
-        if is_py_3():
+        if IS_PY3:
             if http is None:
                 http = urllib3.PoolManager()
 
@@ -452,7 +457,7 @@ def post_request(url, postobj, no_json=False, custom_header=None, return_respons
                 return x
         else:
             if not return_response:
-                if is_py_3():
+                if IS_PY3:
                     content = x.json()
                 else:
                     content = json.loads(x.text)
@@ -676,8 +681,7 @@ def website_ping_update(extra_parameters=None):
 
             # Run "startup" script to send IP, WiFi and such
             try:
-                p = str("sudo " + py_prefix() + " /home/pi/SimplyPrint/startup.py")
-                os.system(p)
+                sub_start_script("startup")
             except:
                 log("Failed to open 'startup' script")
 
@@ -693,8 +697,8 @@ def website_ping_update(extra_parameters=None):
 def download_file(url, new_name, free_space_check=None, timeout=3):
     try:
         r = requests.get(url, allow_redirects=True, verify=False, timeout=timeout)
-    except:
-        return [False, "Failed to request url; " + url]
+    except Exception as e:
+        return [False, "[ERROR] - Failed to request url; " + str(url) + ". Error is; " + str(e)]
 
     # TODO; FIX!!!
     '''if free_space_check is not None:
@@ -798,6 +802,7 @@ def process_file_request(download_url, file_new_name=None):
 def get_post_image(picture_id=None, do_log=True):
     if do_log:
         log("Should take picture!")
+
     was_none = ""
     json_return = None
 
@@ -811,13 +816,13 @@ def get_post_image(picture_id=None, do_log=True):
         try:
             if octoprint_settings["webcam"]["webcamEnabled"]:
                 the_url = octoprint_settings["webcam"]["snapshotUrl"]
-                new_name = str(picture_id) + ".png"
+                new_name = os.path.join(dir_path, "files/" + str(picture_id) + ".png")
 
                 if do_log:
                     log("Taking picture...")
                 the_download = download_file(the_url, new_name)
                 if the_download[0]:
-                    with open(new_name, "rb") as f:
+                    with io.open(new_name, "rb") as f:
                         if do_log:
                             log("Uploading picture...")
                         r = requests.post(upl_url, files={"the_file": f})
@@ -991,3 +996,18 @@ def set_display(text, short_branding=False):
         last_branding = str(text)
 
         octoprint_api_req("printer/command", {"command": "M117 " + prefix + " " + str(text)})
+
+
+def webrequest_pid(make_new=True):
+    webrequest_pid_file = os.path.join(dir_path, "webrequest_pid.txt")
+    if os.path.exists(webrequest_pid_file):
+        with io.open(webrequest_pid_file, "rt", encoding="utf-8") as f:
+            s = f.read()
+            try:
+                os.kill(int(s), signal.SIGSTOP)
+            except:
+                pass
+
+    if make_new:
+        with io.open(webrequest_pid_file, "wt", encoding="utf-8") as file:
+            file.write(str(os.getpid()))

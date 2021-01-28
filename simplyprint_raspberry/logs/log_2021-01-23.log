@@ -1,0 +1,42 @@
+DEBUG:root:Adding missing config section; info
+DEBUG:root:Adding missing config value; info, last_known_version
+DEBUG:root:Adding missing config value; info, just_updated
+DEBUG:root:Adding missing config value; info, is_set_up
+DEBUG:root:Adding missing config value; info, created
+DEBUG:root:Adding missing config value; info, printer_id
+DEBUG:root:Adding missing config value; info, printer_name
+DEBUG:root:Adding missing config value; info, requests_per_minute
+DEBUG:root:Adding missing config value; info, last_connection_attempt
+DEBUG:root:Adding missing config value; info, temp_short_setup_id
+DEBUG:root:Adding missing config value; info, octoprint_down
+DEBUG:root:Adding missing config value; info, last_user_settings_sync
+DEBUG:root:Adding missing config value; info, gcode_scripts_backed_up
+DEBUG:root:Adding missing config value; info, safemode_check_next
+DEBUG:root:Adding missing config section; settings
+DEBUG:root:Adding missing config value; settings, display_enabled
+DEBUG:root:Adding missing config value; settings, display_branding
+DEBUG:root:Adding missing config value; settings, display_show_status
+DEBUG:root:Adding missing config value; settings, display_while_printing_type
+DEBUG:root:Adding missing config value; settings, has_power_controller
+DEBUG:root:Adding missing config value; settings, has_filament_sensor
+DEBUG:root:Adding missing config section; octoprint
+DEBUG:root:Adding missing config value; octoprint, apikey
+DEBUG:root:Adding missing config section; webcam
+DEBUG:root:Adding missing config value; webcam, flipH
+DEBUG:root:Adding missing config value; webcam, flipV
+DEBUG:root:Adding missing config value; webcam, rotate90
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): localhost:80
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/api/settings?apikey=null'): Retry(total=2, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x0000025E0A11E5B0>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /api/settings?apikey=null
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (2): localhost:80
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/api/settings?apikey=null'): Retry(total=1, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x0000025E0A11E700>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /api/settings?apikey=null
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (3): localhost:80
+DEBUG:urllib3.util.retry:Incremented Retry for (url='/api/settings?apikey=null'): Retry(total=0, connect=None, read=None, redirect=None, status=None)
+WARNING:urllib3.connectionpool:Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<urllib3.connection.HTTPConnection object at 0x0000025E0A11E850>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it')': /api/settings?apikey=null
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (4): localhost:80
+DEBUG:root:[ERROR] - Failed to request url; http://localhost/api/settings?apikey=null. Error is; HTTPConnectionPool(host='localhost', port=80): Max retries exceeded with url: /api/settings?apikey=null (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x0000025E0A11EA00>: Failed to establish a new connection: [WinError 10061] No connection could be made because the target machine actively refused it'))
+DEBUG:root:OctoPrint API key is null, getting it from the config...
+DEBUG:root:Failed to 
+DEBUG:root:Settings were modified. Updating settings.ini file...
+DEBUG:urllib3.connectionpool:Starting new HTTP connection (1): localhost:80

@@ -2,3 +2,6 @@
 new_venv
 sp_installed_plugins.txt
 settings.ini
+venv
+dist
+*.egg-info

@@ -1,24 +1,25 @@
-# coding=utf-8
-"""
-SimplyPrint
-Copyright (C) 2020  SimplyPrint ApS
+# -*- coding: utf-8 -*-
+from __future__ import absolute_import, division, unicode_literals
 
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU Affero General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
+#
+# SimplyPrint
+# Copyright (C) 2020-2021  SimplyPrint ApS
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+#
 
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Affero General Public License for more details.
-
-You should have received a copy of the GNU Affero General Public License
-along with this program.  If not, see <http://www.gnu.org/licenses/>.
-"""
-
-__import__('__init__')
-from __init__ import *
+from .base import *
 import time
 import subprocess
 import sys
@@ -47,63 +48,55 @@ def check_has_update():
         log("Updating system...")
         set_display("Updating...", True)
 
-        download_url = request_url + "software/update_script.sh"
-        the_filename, file_extension = os.path.splitext(download_url)
-        new_filename = str("system_updater") + str(file_extension)
-        new_file_loc = os.path.join("/tmp/", new_filename)
+        # Clean up old cron jobs
+        try:
+            from crontab import CronTab
+
+            cron = CronTab(user=True)
+
+            for job in cron:
+                print(job.comment.lower())
+                if "[simplyprint" in job.comment.lower() and "[simplyprint keep]" not in job.comment.lower():
+                    cron.remove(job)
+
+            cron.write()
+        except:
+            log("Failed to clean up cron jobs")
 
         try:
-            if os.path.exists(new_file_loc):
-                os.remove(new_file_loc)
+            process = subprocess.Popen(
+                [sys.executable,
+                 "-m",
+                 "pip",
+                 "install",
+                 "--upgrade",
+                 "--no-cache-dir",
+                 "SimplyPrintRPiSoftware"
+                 ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            # This will wait for install to finish
+            _stdout, _stderr = process.communicate()
         except Exception as e:
-            msg = "Failed to remove file at; " + new_file_loc + ". Error; " + str(e)
-            log(msg)
-            website_ping_update("&system_update_failed=" + url_quote(msg))
-            return False
-
-        clear_installation_files()
-
-        log("Downloading from; " + download_url)
-        log("Downloading to; " + new_file_loc)
-        the_download = download_file(download_url, new_file_loc, True)
-        if the_download[0]:
-            log("Got new install file! - installing!")
-            set_display("Installing...", True)
-
-            try:
-                # Remove cron jobs
-                from crontab import CronTab
-
-                cron = CronTab(user=True)
-
-                for job in cron:
-                    print(job.comment.lower())
-                    if "[simplyprint" in job.comment.lower() and "[simplyprint keep]" not in job.comment.lower():
-                        cron.remove(job)
-
-                cron.write()
-            except:
-                log("Failed to clean up cron jobs")
-
-            try:
-                # Run installation file
-                subprocess.call(["sudo", "bash", "/tmp/system_updater.sh"])
-            except subprocess.CalledProcessError as e:
-                msg = "Failed to open system updater file. Error; " + str(e)
-                log(msg)
-                website_ping_update("&system_update_failed=" + msg)
-                return False
-
-            # Didn't exit - means update has started; tell system and then exit
-            website_ping_update("&system_update_started=true")
-            time.sleep(2)
-            sys.exit()
-        else:
-            set_display("Update failed", True)
-            msg = "Couldn't download file... Got; " + str(the_download[1])
+            msg = "Failed to install update to SimplyPrintRPiSoftware. Error; {}".format(repr(e))
             log(msg)
             website_ping_update("&system_update_failed=" + msg)
             return False
+
+        # Install new cron jobs
+        _process = subprocess.Popen(
+            [sys.executable,
+             "-m",
+             "simplyprint_raspberry",
+             "install",
+             ],
+        )
+
+        # Didn't exit - means update has started; tell system and then exit
+        website_ping_update("&system_update_started=true")
+        time.sleep(2)
+        sys.exit(0)
 
 
 def process_pending_settings():
@@ -223,7 +216,7 @@ def do_the_request(num):
                     set_config_key("info", "temp_short_setup_id", "")
 
                     # Run "startup" script to send IP, WiFi and such
-                    sub_start_script("/home/pi/SimplyPrint/startup.py")
+                    sub_start_script("startup")
 
                     set_config()
                     return True
@@ -260,7 +253,7 @@ def do_the_request(num):
 
                 # Server is missing details from "startup.py"
                 if has_demand("missing_info"):
-                    sub_start_script("/home/pi/SimplyPrint/startup.py")
+                    sub_start_script("startup")
 
                 # Check setup state
                 if not config.getboolean("info", "is_set_up"):
@@ -424,19 +417,19 @@ def do_the_request(num):
 
                     if has_demand("system_reboot"):
                         set_display("Rebooting...", True)
-                        os.system("sudo reboot")
+                        os.system("shutdown -r now")
                         return True
 
                     if has_demand("system_shutdown"):
                         set_display("Shutting down", True)
-                        os.system("sudo shutdown -h now")
+                        os.system("shutdown -h now")
                         return True
 
                     if has_demand("start_octoprint"):
-                        os.system("sudo service octoprint start")
+                        os.system("service octoprint start")
 
                     if has_demand("shutdown_octoprint"):
-                        os.system("sudo service octoprint stop")
+                        os.system("service octoprint stop")
 
                     if has_demand("restart_octoprint"):
                         os.system("sudo service octoprint restart")
@@ -445,6 +438,11 @@ def do_the_request(num):
                         set_display("Updating OctoPrint", True)
                         # /home/pi/oprint/bin/python2 -m pip --disable-pip-version-check install
                         # https://github.com/foosel/OctoPrint/archive/1.4.0.zip --no-cache-dir
+                        # CP: TODO? use https://get.octoprint.org/latest instead of hard coded version
+                        # Change it to this:
+                        # sys.executable + " -m pip install https://get.octoprint.org/latest"
+                        # Which on most systems will result in `/home/pi/oprint/bin/python -m pip install ...`
+                        # Useful for if you want to go platform-agnostic :)
 
                     if has_demand("psu_on") or has_demand("psu_keepalive"):
                         # Turn power controller ON
@@ -465,15 +463,15 @@ def do_the_request(num):
                         }
 
                         try:
-                            test = json.loads(demand_list["webcam_settings_updated"])
-                            if "flipH" in test:
-                                if test["flipH"]:
+                            cam_settings = json.loads(demand_list["webcam_settings_updated"])
+                            if "flipH" in cam_settings:
+                                if cam_settings["flipH"]:
                                     new_s_cam["flipH"] = "True"
-                            if "flipV" in test:
-                                if test["flipV"]:
+                            if "flipV" in cam_settings:
+                                if cam_settings["flipV"]:
                                     new_s_cam["flipV"] = "True"
-                            if "rotate90" in test:
-                                if test["rotate90"]:
+                            if "rotate90" in cam_settings:
+                                if cam_settings["rotate90"]:
                                     new_s_cam["rotate90"] = "True"
 
                             set_config_key("webcam", "flipH", new_s_cam["flipH"])
@@ -481,7 +479,7 @@ def do_the_request(num):
                             set_config_key("webcam", "rotate90", new_s_cam["rotate90"])
                             set_config()
 
-                            if "sync" in test:
+                            if "sync" in cam_settings:
                                 # Sync these settings with OctoPrint
                                 to_post = {
                                     "flipH": False,
@@ -521,13 +519,13 @@ def do_the_request(num):
                                 log("Installing OctoPrint plugin " + action["name"] + "!")
                                 installed_plugins.append(action["key"])
 
-                                with open(plugins_txt, "a") as myfile:
+                                with io.open(plugins_txt, "a") as myfile:
                                     myfile.write(action["name"] + "\n")
 
                                 # "Notify" plugin of plugins installed through SimplyPrint!
                                 sp_plugins = []
                                 if os.path.isfile(plugins_txt):
-                                    with open(plugins_txt) as f:
+                                    with io.open(plugins_txt) as f:
                                         for line in f:
                                             if len(line) and (line.strip() not in sp_plugins):
                                                 sp_plugins.append(line.strip())
@@ -542,12 +540,18 @@ def do_the_request(num):
                                 })
 
                                 # Install through pip, and restart OctoPrint
-                                os.system(
-                                    "yes | sudo /home/pi/oprint/bin/pip uninstall \"" + action["pip_name"] + "\"")
-
-                                os.system(
-                                    "yes | sudo -u pi /home/pi/oprint/bin/pip install \"" + action[
-                                        "install_url"] + "\"")
+                                command_uninstall = [sys.executable, "-m", "pip", "uninstall", "-y", + action["pip_name"]]
+                                command_install = [sys.executable, "-m", "pip", "install", action["install_url"]]
+                                process = subprocess.Popen(command_uninstall, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                stdout, stderr = process.communicate()
+                                log("Uninstall command, stdout" + str(stdout.decode("utf-8", errors="replace")))
+                                log("Uninstall command, stderr" + str(stderr.decode("utf-8", errors="replace")))
+                                
+                                command_install = [sys.executable, "-m", "pip", "install", action["install_url"]]
+                                process2 = subprocess.Popen(command_install, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                stdout, stderr = process2.communicate()
+                                log("Uninstall command, stdout" + str(stdout.decode("utf-8", errors="replace")))
+                                log("Uninstall command, stderr" + str(stderr.decode("utf-8", errors="replace")))
 
                                 do_restart_octoprint = True
                             elif action["type"] == "uninstall":
@@ -557,7 +561,7 @@ def do_the_request(num):
                                     # Get current plugins
                                     log("Uninstalling OctoPrint plugin; " + action["name"])
 
-                                    with open(plugins_txt, "r") as f:
+                                    with io.open(plugins_txt, "r") as f:
                                         for line in f:
                                             stripped_line = line.strip()
                                             if len(line) and stripped_line != action["name"].strip():
@@ -574,12 +578,12 @@ def do_the_request(num):
                                     })
 
                                     # Set new list not containing the about-to-be-deleted one
-                                    with open(plugins_txt, "w") as f:
+                                    with io.open(plugins_txt, "w") as f:
                                         for line in sp_plugins:
                                             f.write(line + "\n")
 
                                 os.system(
-                                    "yes | sudo /home/pi/oprint/bin/pip uninstall \"" + action["pip_name"].replace(
+                                    "yes | " + sys.executable + " -m pip uninstall \"" + action["pip_name"].replace(
                                         " ", "-") + "\"")
                                 do_restart_octoprint = True
                             elif action["type"] == "set_settings":
@@ -704,7 +708,7 @@ def do_the_request(num):
 
                     if has_demand("livestream"):
                         print("\n\nStart livestream!\n\n")
-                        sub_start_script("/home/pi/SimplyPrint/image_stream.py")
+                        sub_start_script("image_stream")
 
                     # Check for updates
                     if check_has_update() == False:
@@ -739,6 +743,7 @@ def do_the_request(num):
                             send_job_command("pause", "pause")
                     else:
                         if p_state == "Paused":
+                            print("STARTING PRINT JOB AGAIN!!!!!")
                             send_job_command("pause", "resume")
 
                     # START PRINTING (or process file first, but still!)
@@ -785,57 +790,59 @@ def do_the_request(num):
     return False
 
 
-print("Starting loop...")
+def run_requests():
+    webrequest_pid()
+    print("Starting loop...")
 
-i = 0  # Skip the last one - cron handles the last by doing it again, so cut it off
-total_requests = 0
-successful_requests = 0
-failed_requests = 0
+    i = 0  # Skip the last one - cron handles the last by doing it again, so cut it off
+    total_requests = 0
+    successful_requests = 0
+    failed_requests = 0
 
-dateTimeObj = datetime.now()
-timestampStr = dateTimeObj.strftime("%S")
-seconds_to_run = 60 - int(timestampStr)
+    dateTimeObj = datetime.now()
+    timestampStr = dateTimeObj.strftime("%S")
+    seconds_to_run = 60 - int(timestampStr)
 
-if seconds_to_run > 58:
-    seconds_to_run = 58
+    if seconds_to_run > 58:
+        seconds_to_run = 58
 
-print("Gonna run for " + str(seconds_to_run) + "s")
-print(str(times_a_minute) + " times a minute")
+    print("Gonna run for " + str(seconds_to_run) + "s")
+    print(str(times_a_minute) + " times a minute")
 
-while i < times_a_minute:
-    print("Request...")
+    while i < times_a_minute:
+        print("Request...")
 
-    if time.time() - start_time < seconds_to_run:  # Don't continue for more than a minute - a new cron job will take over
-        the_request = do_the_request(i)
-        total_requests += 1
+        if time.time() - start_time < seconds_to_run:  # Don't continue for more than a minute - a new cron job will take over
+            the_request = do_the_request(i)
+            total_requests += 1
 
-        if the_request:
-            successful_requests += 1
+            if the_request:
+                successful_requests += 1
+            else:
+                failed_requests += 1
+
+            if times_a_minute > 1 and times_a_minute - 1 != i:
+                time.sleep(60 / times_a_minute)
+            i += 1
         else:
-            failed_requests += 1
+            break
 
-        if times_a_minute > 1 and times_a_minute - 1 != i:
-            time.sleep(60 / times_a_minute)
-        i += 1
+    if successful_requests == total_requests:
+        log("All requests successful! (" + str(total_requests) + ")")
     else:
-        break
+        check_connect_printer()
 
-if successful_requests == total_requests:
-    log("All requests successful! (" + str(total_requests) + ")")
-else:
-    check_connect_printer()
+        log(str(failed_requests) + " requests failed, " + str(successful_requests) + " succeeded")
+        if has_internet():
+            set_display("Requests failed", True)
+        else:
+            set_display("No internet", True)
 
-    log(str(failed_requests) + " requests failed, " + str(successful_requests) + " succeeded")
-    if has_internet():
-        set_display("Requests failed", True)
-    else:
-        set_display("No internet", True)
+    if len(plugin_settings_awaiting) > 0:
+        log("Requests are done, but a plugin has been installed which awaits a settings change! Waitin for that")
+        while len(plugin_settings_awaiting) > 0:
+            print("Trying again...")
+            process_pending_settings()
+            time.sleep(1)
 
-if len(plugin_settings_awaiting) > 0:
-    log("Requests are done, but a plugin has been installed which awaits a settings change! Waitin for that")
-    while len(plugin_settings_awaiting) > 0:
-        print("Trying again...")
-        process_pending_settings()
-        time.sleep(1)
-
-    log("Settings set!")
+        log("Settings set!")
