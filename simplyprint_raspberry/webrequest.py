@@ -540,15 +540,17 @@ def do_the_request(num):
                                 })
 
                                 # Install through pip, and restart OctoPrint
-                                command_uninstall = [sys.executable, "-m", "pip", "uninstall", "-y", + action["pip_name"]]
-                                command_install = [sys.executable, "-m", "pip", "install", action["install_url"]]
-                                process = subprocess.Popen(command_uninstall, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                command_uninstall = [sys.executable, "-m", "pip", "uninstall", "-y",
+                                                     + action["pip_name"]]
+                                process = subprocess.Popen(command_uninstall, stdout=subprocess.PIPE,
+                                                           stderr=subprocess.PIPE)
                                 stdout, stderr = process.communicate()
                                 log("Uninstall command, stdout" + str(stdout.decode("utf-8", errors="replace")))
                                 log("Uninstall command, stderr" + str(stderr.decode("utf-8", errors="replace")))
-                                
+
                                 command_install = [sys.executable, "-m", "pip", "install", action["install_url"]]
-                                process2 = subprocess.Popen(command_install, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                                process2 = subprocess.Popen(command_install, stdout=subprocess.PIPE,
+                                                            stderr=subprocess.PIPE)
                                 stdout, stderr = process2.communicate()
                                 log("Uninstall command, stdout" + str(stdout.decode("utf-8", errors="replace")))
                                 log("Uninstall command, stderr" + str(stderr.decode("utf-8", errors="replace")))
