@@ -337,7 +337,7 @@ def do_the_request(num):
                             config_set = True
                             set_config_key("info", "printer_id", str(the_json["printer_id"]))
 
-                        the_printer_name = str(the_json["printer_name"]).strip()
+                        the_printer_name = the_json["printer_name"].encode("utf-8").strip()
                         old_name = config.get("info", "printer_name")
                         if old_name != the_printer_name:
                             config_set = True

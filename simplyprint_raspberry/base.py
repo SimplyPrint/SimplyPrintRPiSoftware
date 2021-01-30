@@ -319,7 +319,7 @@ def set_config():
                     "request_url": update_url + "?id=" + get_rpid(),
                     "rpi_id": str(get_rpid()),
                     "printer_id": printer_id,
-                    "printer_name": str(config.get("info", "printer_name")),
+                    "printer_name": config.get("info", "printer_name").encode("utf-8"),
                     "simplyprint_version": str(system_version),
                     "sp_local_installed": True,
                     "temp_short_setup_id": str(config.get("info", "temp_short_setup_id")),
@@ -926,8 +926,8 @@ def sync_settings_with_plugin():
 
                         hasmodified = True
 
-                    the_check = str(config.get("info", "printer_name"))
-                    printer_name = str(the_data["printer_name"]).strip()
+                    the_check = config.get("info", "printer_name").encode("utf-8")
+                    printer_name = the_data["printer_name"].encode("utf-8").strip()
 
                     if printer_name != the_check:
                         log("Plugin setting 'printer_name' is not the same as local config"
@@ -935,8 +935,8 @@ def sync_settings_with_plugin():
 
                         hasmodified = True
 
-                    the_check = str(config.get("info", "temp_short_setup_id"))
-                    printer_name = the_data["temp_short_setup_id"].strip()
+                    the_check = config.get("info", "temp_short_setup_id").encode("utf-8")
+                    printer_name = the_data["temp_short_setup_id"].encode("utf-8").strip()
 
                     if printer_name != the_check:
                         log("Plugin setting 'temp_short_setup_id' is not the same as local config"
