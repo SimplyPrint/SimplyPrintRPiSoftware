@@ -342,7 +342,7 @@ def do_the_request(num):
                         if old_name != the_printer_name:
                             config_set = True
                             log("Updating printer name to; " + the_printer_name + " (old was " + old_name + ")")
-                            set_config_key("info", "printer_name", the_printer_name)
+                            set_config_key("info", "printer_name", the_printer_name.replace("%", "%%"))
 
                         if config_set:
                             set_config()

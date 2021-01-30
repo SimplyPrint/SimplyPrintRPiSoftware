@@ -113,7 +113,7 @@ if not os.path.exists(log_locations):
 debugging = True
 logging.basicConfig(level=logging.DEBUG,
                     filename=(log_locations + "/log_" + str(
-                        datetime.today().strftime('%Y-%m-%d').encode("utf-8")) + ".log"))
+                        datetime.today().strftime('%Y-%m-%d')) + ".log"))
 
 now = time.time()
 for filename in os.listdir(log_locations):
@@ -158,7 +158,7 @@ def get_rpid():
     if os.path.exists(rpi_id_loc):
         f = open(rpi_id_loc, "r")
         if f.mode == 'r':
-            contents = f.read().encode("utf-8")
+            contents = f.read()
             return str(contents)
     return ""
 
@@ -323,7 +323,7 @@ def set_config():
                     "request_url": update_url + "?id=" + get_rpid(),
                     "rpi_id": str(get_rpid()),
                     "printer_id": printer_id,
-                    "printer_name": config.get("info", "printer_name").encode("utf-8"),
+                    "printer_name": config.get("info", "printer_name"),
                     "simplyprint_version": str(system_version),
                     "sp_local_installed": True,
                     "temp_short_setup_id": str(config.get("info", "temp_short_setup_id")),
@@ -930,7 +930,7 @@ def sync_settings_with_plugin():
 
                         hasmodified = True
 
-                    the_check = config.get("info", "printer_name").encode("utf-8")
+                    the_check = config.get("info", "printer_name")
                     printer_name = the_data["printer_name"].encode("utf-8").strip()
 
                     if printer_name != the_check:
@@ -939,7 +939,7 @@ def sync_settings_with_plugin():
 
                         hasmodified = True
 
-                    the_check = config.get("info", "temp_short_setup_id").encode("utf-8")
+                    the_check = config.get("info", "temp_short_setup_id")
                     printer_name = the_data["temp_short_setup_id"].encode("utf-8").strip()
 
                     if printer_name != the_check:
@@ -998,8 +998,6 @@ last_branding = None
 
 def set_display(text, short_branding=False):
     global last_branding
-
-    text = text.encode("utf-8")
 
     prefix = ""
     if config.getboolean("settings", "display_branding") or not config.getboolean("info", "is_set_up"):
