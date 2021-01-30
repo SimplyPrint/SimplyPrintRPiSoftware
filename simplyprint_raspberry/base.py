@@ -931,8 +931,8 @@ def sync_settings_with_plugin():
                         hasmodified = True
 
                     the_check = config.get("info", "printer_name")
-                    printer_name = the_data["printer_name"].encode("utf-8").strip()
-
+                    printer_name = the_data["printer_name"].strip()
+                    
                     if printer_name != the_check:
                         log("Plugin setting 'printer_name' is not the same as local config"
                             "\nLocal; " + str(the_check) + ", plugin; " + str(printer_name))
@@ -940,7 +940,7 @@ def sync_settings_with_plugin():
                         hasmodified = True
 
                     the_check = config.get("info", "temp_short_setup_id")
-                    printer_name = the_data["temp_short_setup_id"].encode("utf-8").strip()
+                    printer_name = the_data["temp_short_setup_id"].strip()
 
                     if printer_name != the_check:
                         log("Plugin setting 'temp_short_setup_id' is not the same as local config"
