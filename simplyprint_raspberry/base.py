@@ -109,7 +109,7 @@ if not os.path.exists(log_locations):
 
 debugging = True
 logging.basicConfig(level=logging.DEBUG,
-                    filename=(log_locations + "/log_" + str(datetime.today().strftime('%Y-%m-%d')) + ".log"))
+                    filename=(log_locations + "/log_" + str(datetime.today().strftime('%Y-%m-%d').encode("utf-8")) + ".log"))
 
 now = time.time()
 for filename in os.listdir(log_locations):
@@ -154,7 +154,7 @@ def get_rpid():
     if os.path.exists(rpi_id_loc):
         f = open(rpi_id_loc, "r")
         if f.mode == 'r':
-            contents = f.read()
+            contents = f.read().encode("utf-8")
             return str(contents)
     return ""
 
@@ -994,6 +994,8 @@ last_branding = None
 
 def set_display(text, short_branding=False):
     global last_branding
+
+    text = text.encode("utf-8")
 
     prefix = ""
     if config.getboolean("settings", "display_branding") or not config.getboolean("info", "is_set_up"):

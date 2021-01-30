@@ -185,10 +185,10 @@ def run_startup():
         set_octoprint_settings()
 
         the_url = ("&startup=true"
-                   "&device_ip=" + (url_quote(str(the_ip).rstrip("\n\r").lstrip())) +
-                   "&pi_model=" + (url_quote(str(pi_model).rstrip("\n\r").lstrip())) +
-                   "&wifi_ssid=" + (url_quote(str(the_ssid).rstrip("\n\r").lstrip())) +
-                   "&hostname=" + (url_quote(str(the_hostname).rstrip("\n\r").lstrip())) +
+                   "&device_ip=" + (url_quote(the_ip.encode("utf-8").rstrip("\n\r").lstrip())) +
+                   "&pi_model=" + (url_quote(pi_model.encode("utf-8").rstrip("\n\r").lstrip())) +
+                   "&wifi_ssid=" + (url_quote(the_ssid.encode("utf-8").rstrip("\n\r").lstrip())) +
+                   "&hostname=" + (url_quote(the_hostname.encode("utf-8").rstrip("\n\r").lstrip())) +
                    "&has_camera=" + (url_quote(str(has_camera))) +
                    "&octoprint_version=" + (url_quote(str(octoprint_version))) +
                    "&octoprint_api_version=" + (url_quote(str(octoprint_api_version))) +
