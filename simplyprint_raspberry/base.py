@@ -33,7 +33,7 @@ import subprocess
 import argparse
 import io
 
-system_version = "2.4.9"  # This MUST MATCH the version specified in setup.py
+system_version = "2.5.0"  # This MUST MATCH the version specified in setup.py
 api_version = "0.0.3"
 
 IS_PY3 = sys.version_info.major == 3
@@ -49,6 +49,9 @@ else:
     # Python 2
     import ConfigParser
     import urllib2
+
+    reload(sys)
+    sys.setdefaultencoding("utf8")
 
     config = ConfigParser.SafeConfigParser()
 
@@ -109,7 +112,8 @@ if not os.path.exists(log_locations):
 
 debugging = True
 logging.basicConfig(level=logging.DEBUG,
-                    filename=(log_locations + "/log_" + str(datetime.today().strftime('%Y-%m-%d').encode("utf-8")) + ".log"))
+                    filename=(log_locations + "/log_" + str(
+                        datetime.today().strftime('%Y-%m-%d').encode("utf-8")) + ".log"))
 
 now = time.time()
 for filename in os.listdir(log_locations):
