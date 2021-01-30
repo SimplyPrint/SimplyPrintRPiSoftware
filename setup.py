@@ -16,13 +16,13 @@ with io.open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="SimplyPrintRPiSoftware",
-    version="2.5.0",  # This MUST match the version in base.py
+    version="2.5.2",  # This MUST match the version in base.py
     author="SimplyPrint",
     author_email="albert@simplyprint.io",
     description="The SimplyPrint software used to communicate with the platform",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://simplyprint.io",  # TODO?
+    url="https://simplyprint.io",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",

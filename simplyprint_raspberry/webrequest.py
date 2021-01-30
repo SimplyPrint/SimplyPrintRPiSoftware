@@ -652,7 +652,7 @@ def do_the_request(num):
 
                             default_cancel_gcode = ";disable motorsM84;disable all heaters{% snippet 'disable_hotends' %}{% snippet 'disable_bed' %};disable fanM106 S0"
 
-                            if "script" in octoprint_settings and "gcode" in octoprint_settings["scripts"]:
+                            if "scripts" in octoprint_settings and "gcode" in octoprint_settings["scripts"]:
                                 if "afterPrintCancelled" in octoprint_settings["scripts"]["gcode"]:
                                     current_cancel_gcode = octoprint_settings["scripts"]["gcode"]["afterPrintCancelled"]
 
@@ -668,6 +668,7 @@ def do_the_request(num):
 
                             if current_cancel_gcode or current_resume_gcode or current_pause_gcode:
                                 # One or all of the GCODE scripts we want to overwrite have values - sync with server!
+                                log("Synced local GCODE scripts to SP")
                                 website_ping_update("&gcode_scripts_backed_up=" + url_quote(json.dumps({
                                     "cancel_gcode": current_cancel_gcode,
                                     "pause_gcode": current_pause_gcode,
@@ -675,6 +676,7 @@ def do_the_request(num):
                                 })))
                             else:
                                 # No backups needed - user has not set anything
+                                log("No backups needed - no user modified GCODE scripts")
                                 website_ping_update("&no_gcode_script_backup_needed")
 
                             set_config_key("info", "gcode_scripts_backed_up", "True")

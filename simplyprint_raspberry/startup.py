@@ -29,7 +29,6 @@ import io
 
 from .base import *
 
-
 the_ip = ""
 the_ssid = ""
 the_hostname = ""
@@ -127,7 +126,10 @@ def run_startup():
     global the_hostname
     global pi_model
     global octoprint_settings
+    global octoprint_version
+    global octoprint_api_version
     global python_version
+    global the_ip
 
     # Get hostname
     try:
@@ -184,12 +186,34 @@ def run_startup():
         get_octoprint_details()
         set_octoprint_settings()
 
+        if not IS_PY3:
+            if the_ip:
+                the_ip = the_ip.encode("utf-8")
+
+            if pi_model:
+                pi_model = pi_model.encode("utf-8")
+
+            if the_ssid:
+                the_ssid = the_ssid.encode("utf-8")
+
+            if the_hostname:
+                the_hostname = the_hostname.encode("utf-8")
+
+            if octoprint_version:
+                octoprint_version = octoprint_version.encode("utf-8")
+
+            if octoprint_api_version:
+                octoprint_api_version = octoprint_api_version.encode("utf-8")
+
+            if python_version:
+                python_version = python_version.encode("utf-8")
+
         the_url = ("&startup=true"
-                   "&device_ip=" + (url_quote(the_ip.encode("utf-8").rstrip("\n\r").lstrip())) +
-                   "&pi_model=" + (url_quote(pi_model.encode("utf-8").rstrip("\n\r").lstrip())) +
-                   "&wifi_ssid=" + (url_quote(the_ssid.encode("utf-8").rstrip("\n\r").lstrip())) +
-                   "&hostname=" + (url_quote(the_hostname.encode("utf-8").rstrip("\n\r").lstrip())) +
-                   "&has_camera=" + (url_quote(str(has_camera))) +
+                   "&device_ip=" + (url_quote(the_ip.rstrip("\n\r").lstrip())) +
+                   "&pi_model=" + (url_quote(pi_model.rstrip("\n\r").lstrip())) +
+                   "&wifi_ssid=" + (url_quote(the_ssid.rstrip("\n\r").lstrip())) +
+                   "&hostname=" + (url_quote(the_hostname.rstrip("\n\r").lstrip())) +
+                   "&has_camera=" + has_camera +
                    "&octoprint_version=" + (url_quote(str(octoprint_version))) +
                    "&octoprint_api_version=" + (url_quote(str(octoprint_api_version))) +
                    "&python_version=" + (url_quote(str(python_version))))

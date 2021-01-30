@@ -33,7 +33,7 @@ import subprocess
 import argparse
 import io
 
-system_version = "2.5.0"  # This MUST MATCH the version specified in setup.py
+system_version = "2.5.2"  # This MUST MATCH the version specified in setup.py
 api_version = "0.0.3"
 
 IS_PY3 = sys.version_info.major == 3
@@ -440,11 +440,16 @@ def get_request(url, no_json=False, is_api_request=False, get_response_code=Fals
     if no_json:
         return content
     else:
-        try:
-            json_content = json.loads(content.decode("utf-8"))
-            return json_content
-        except:
-            log("[ERROR] - Failed to jsonify request; " + str(content.decode("utf-8")))
+        content = content.decode("utf-8")
+        if str(content) != "Printer is not operational":
+            try:
+                json_content = json.loads(content)
+                return json_content
+            except:
+                log("[ERROR] - Failed to jsonify request; " + str(content))
+                return False
+        else:
+            # Just not connected, not an error
             return False
 
 
@@ -932,7 +937,7 @@ def sync_settings_with_plugin():
 
                     the_check = config.get("info", "printer_name")
                     printer_name = the_data["printer_name"].strip()
-                    
+
                     if printer_name != the_check:
                         log("Plugin setting 'printer_name' is not the same as local config"
                             "\nLocal; " + str(the_check) + ", plugin; " + str(printer_name))
