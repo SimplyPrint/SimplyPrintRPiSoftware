@@ -617,9 +617,11 @@ def do_the_request(num):
                                 if "restart" in action and action["restart"]:
                                     do_restart_octoprint = True
 
-                        # End loop
+                        # End plugin action loop
                         if do_restart_octoprint:
                             os.system("sudo service octoprint restart")
+
+                        website_ping_update("&plugin_actions_executed")
                     else:
                         # No plugins to install or settings to set
                         process_pending_settings()

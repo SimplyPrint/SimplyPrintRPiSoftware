@@ -39,6 +39,10 @@ def run_script(name):
         from .crontab_manager import create_cron_jobs
         create_cron_jobs()
         run_initial_webrequest()
+    elif name == "partial_install":
+        # Image install; don't get ID right away
+        from .crontab_manager import create_cron_jobs
+        create_cron_jobs()
     elif name == "startup":
         from .startup import run_startup
         # Startup can hang for a bit, so run as a thread to avoid issues there
