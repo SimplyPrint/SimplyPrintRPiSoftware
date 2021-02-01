@@ -32,7 +32,7 @@ import subprocess
 import argparse
 import io
 
-system_version = "2.5.1"  # This MUST MATCH the version specified in setup.py
+system_version = "2.5.2"  # This MUST MATCH the version specified in setup.py
 api_version = "0.0.3"
 
 IS_PY3 = sys.version_info.major == 3
