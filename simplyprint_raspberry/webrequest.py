@@ -688,7 +688,6 @@ def do_the_request(num):
                     if has_demand("has_gcode_changes", False):
                         # print(demand_list["has_gcode_changes"])
                         lst = demand_list["has_gcode_changes"]
-
                         if "cancel" in lst and "pause" in lst and "resume" in lst:
                             try:
                                 the_data = {
@@ -710,7 +709,7 @@ def do_the_request(num):
                                 the_return = octoprint_api_req("settings", the_data, True, None, True)
 
                                 if the_return == 200:
-                                    log("Synced GCODE scripts with server")
+                                    log("Pulled GCODE scripts from server")
                                     website_ping_update("&gcode_scripts_fetched")
                                 else:
                                     log("Failed to update OctoPrint settings with new GCODE scripts...")

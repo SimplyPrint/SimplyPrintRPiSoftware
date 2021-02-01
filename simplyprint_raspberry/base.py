@@ -18,7 +18,6 @@ from __future__ import absolute_import, division, unicode_literals
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-
 import yaml
 import uuid
 import requests
@@ -81,6 +80,7 @@ __global_print_job__ = None
 __global_printer__ = None
 is_serial_connecting = False
 octoprint_settings = None
+octoprint_set_up = False
 http = None
 last_request_response_code = None
 op_down_check = 0
@@ -111,7 +111,7 @@ if not os.path.exists(log_locations):
     os.makedirs(log_locations)
 
 debugging = True
-logging.basicConfig(level=logging.DEBUG,
+logging.basicConfig(level=logging.INFO,
                     filename=(log_locations + "/log_" + str(
                         datetime.today().strftime('%Y-%m-%d')) + ".log"))
 
@@ -284,7 +284,7 @@ def set_config_key(section, key, value):
 def set_config():
     global settings_location, config, hasmodified, octoprint_plugin_name, system_version
 
-    if config.get("octoprint", "apikey") == "null":
+    if config.get("octoprint", "apikey") == "null" or config.get("octoprint", "apikey") == "":
         log("OctoPrint API key is null, getting it from the config...")
         get_octoprint_api_key()
 
@@ -446,7 +446,10 @@ def get_request(url, no_json=False, is_api_request=False, get_response_code=Fals
                 json_content = json.loads(content)
                 return json_content
             except:
-                log("[ERROR] - Failed to jsonify request; " + str(content))
+                if response_code == 403:
+                    log("Could not jsonify request to URL; " + str(url) + "; 403 error", "info")
+
+                log("[ERROR] - Failed to jsonify request; " + str(content), "debug")
                 return False
         else:
             # Just not connected, not an error
@@ -607,7 +610,7 @@ def check_connect_printer():
 
 
 def website_ping_update(extra_parameters=None):
-    global hasmodified, current_job_completion_var, api_version
+    global hasmodified, current_job_completion_var, api_version, octoprint_set_up
 
     base_url = update_url + "?id=" + get_rpid() + "&api_version=" + api_version
 
@@ -619,13 +622,22 @@ def website_ping_update(extra_parameters=None):
 
     if printer_info is None:
         # Check if OctoPrint is set up
+        op_was_set_up = octoprint_set_up
+        octoprint_set_up = True
         try:
             check = octoprint_api_req("printer/command", {}, True)
             if check.text == "OctoPrint isn't setup yet":
-                log("OctoPrint is not set up - letting server know")
+                octoprint_set_up = False
+                log("OctoPrint is not set up - letting server know", "info")
                 base_url += "&octoprint_not_set_up"
         except:
             pass
+
+        if octoprint_set_up and octoprint_set_up != op_was_set_up:
+            # Was not set up, but now is; sync settings!
+            log("OctoPrint has been set up - syncing details", "info")
+            sync_settings_with_plugin()
+            set_config()
 
     is_in_setup = not config.getboolean("info", "is_set_up")
     '''if not is_in_setup:
@@ -635,82 +647,90 @@ def website_ping_update(extra_parameters=None):
     if p_state is None:
         p_state = "unknown"
 
-    if is_in_setup:
-        # Make sure printer is connected when it's expecting setup
-        check_connect_printer()
+    try:
+        # Try request
+        if is_in_setup:
+            # Make sure printer is connected when it's expecting setup
+            check_connect_printer()
 
-        the_url = base_url + "&new=true&printer_tmp_state=" + p_state + "&custom_sys_version=" + str(system_version)
-        # log("Requesting; " + str(the_url))
-        return get_request(the_url, True)
-    else:
-        # "Offline" often comes with a long string complaining about serial... We don't want that
-        if len(p_state) >= 7:
-            if p_state[0:7] == "Offline":
-                p_state = "Offline"
+            the_url = base_url + "&new=true&printer_tmp_state=" + p_state + "&custom_sys_version=" + str(system_version)
+            return get_request(the_url, True)
+        else:
+            # "Offline" often comes with a long string complaining about serial... We don't want that
+            if len(p_state) >= 7:
+                if p_state[0:7] == "Offline":
+                    p_state = "Offline"
 
-        to_set = {}
+            to_set = {}
 
-        if printer_info is not None:
-            if "temperature" in printer_info:
-                if "bed" in printer_info["temperature"]:
-                    if printer_info["temperature"]["bed"]["actual"] is not None:
-                        to_set["bed_temp"] = round(printer_info["temperature"]["bed"]["actual"])
-                    else:
-                        to_set["bed_temp"] = 0
+            if printer_info is not None:
+                if "temperature" in printer_info:
+                    if "bed" in printer_info["temperature"]:
+                        if printer_info["temperature"]["bed"]["actual"] is not None:
+                            to_set["bed_temp"] = round(printer_info["temperature"]["bed"]["actual"])
+                        else:
+                            to_set["bed_temp"] = 0
 
-                    if printer_info["temperature"]["bed"]["target"] is not None:
-                        to_set["target_bed_temp"] = round(printer_info["temperature"]["bed"]["target"])
-                    else:
-                        to_set["target_bed_temp"] = 0
+                        if printer_info["temperature"]["bed"]["target"] is not None:
+                            to_set["target_bed_temp"] = round(printer_info["temperature"]["bed"]["target"])
+                        else:
+                            to_set["target_bed_temp"] = 0
 
-                if "tool0" in printer_info["temperature"]:
-                    if printer_info["temperature"]["tool0"]["actual"] is not None:
-                        to_set["tool_temp"] = round(printer_info["temperature"]["tool0"]["actual"])
-                    else:
-                        to_set["tool_temp"] = 0
+                    if "tool0" in printer_info["temperature"]:
+                        if printer_info["temperature"]["tool0"]["actual"] is not None:
+                            to_set["tool_temp"] = round(printer_info["temperature"]["tool0"]["actual"])
+                        else:
+                            to_set["tool_temp"] = 0
 
-                    if printer_info["temperature"]["tool0"]["target"] is not None:
-                        to_set["target_tool_temp"] = round(printer_info["temperature"]["tool0"]["target"])
-                    else:
-                        to_set["target_tool_temp"] = 0
+                        if printer_info["temperature"]["tool0"]["target"] is not None:
+                            to_set["target_tool_temp"] = round(printer_info["temperature"]["tool0"]["target"])
+                        else:
+                            to_set["target_tool_temp"] = 0
 
-            if p_state == "Printing" or p_state == "Cancelling" or p_state == "Pausing" or p_state == "Paused":
-                print_job = get_print_job()
-                if print_job is not None:
-                    if "progress" in print_job:
-                        if "completion" in print_job["progress"]:
-                            if print_job["progress"]["completion"] is not None:
-                                to_set["completion"] = round(float(print_job["progress"]["completion"]))
-                                current_job_completion_var = int(to_set["completion"])
+                if p_state == "Printing" or p_state == "Cancelling" or p_state == "Pausing" or p_state == "Paused":
+                    print_job = get_print_job()
+                    if print_job is not None:
+                        if "progress" in print_job:
+                            if "completion" in print_job["progress"]:
+                                if print_job["progress"]["completion"] is not None:
+                                    to_set["completion"] = round(float(print_job["progress"]["completion"]))
+                                    current_job_completion_var = int(to_set["completion"])
 
-                    to_set["estimated_finish"] = print_job["progress"]["printTimeLeft"]
+                        to_set["estimated_finish"] = print_job["progress"]["printTimeLeft"]
 
-                    if print_job["job"]["filament"] is not None:
-                        to_set["filament_usage"] = print_job["job"]["filament"]["tool0"]["volume"]
+                        if print_job["job"]["filament"] is not None:
+                            to_set["filament_usage"] = print_job["job"]["filament"]["tool0"]["volume"]
 
-                    to_set["initial_estimate"] = print_job["job"]["estimatedPrintTime"]
+                        to_set["initial_estimate"] = print_job["job"]["estimatedPrintTime"]
 
-        base_url += "&custom_sys_version=" + str(system_version)
+            base_url += "&custom_sys_version=" + str(system_version)
 
-        if config.getboolean("info", "just_updated"):
-            config.set("info", "just_updated", "False")
-            log("Just updated to new system version!")
-            hasmodified = True
-            base_url += "&system_updated=yes"
-            set_config()
+            if config.getboolean("info", "just_updated"):
+                config.set("info", "just_updated", "False")
+                log("Just updated to new system version!")
+                hasmodified = True
+                base_url += "&system_updated=yes"
+                set_config()
 
-            # Run "startup" script to send IP, WiFi and such
-            try:
-                sub_start_script("startup")
-            except:
-                log("Failed to open 'startup' script")
+                # Run "startup" script to send IP, WiFi and such
+                try:
+                    sub_start_script("startup")
+                except:
+                    log("Failed to open 'startup' script")
 
-            # Clean up!
-            clear_installation_files()
+                # Clean up!
+                clear_installation_files()
 
-        the_url = base_url + "&pstatus=" + p_state + "&extra=" + url_quote(json.dumps(to_set))
+            the_url = base_url + "&pstatus=" + p_state + "&extra=" + url_quote(json.dumps(to_set))
 
-        return get_request(the_url, True)
+            return get_request(the_url, True)
+    except Exception as e:
+        # Request failed
+        log("Web request failed! Url; " + str(url) + ". Error is; " + str(e), "info")
+        try:
+            get_request(base_url + "&fatalexception=" + str(e))
+        except:
+            log("Also failed to tell server about the error", "info")
 
 
 # Upload, slice & file processing
